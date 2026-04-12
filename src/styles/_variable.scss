@@ -1,0 +1,51 @@
+// ==============================
+// PALETA PRINCIPAL — VERDE OLIVA
+// ==============================
+$color-primary-100: #C0C080;
+$color-primary-200: #9D9D60;
+$color-primary-300: #7A7A40;
+$color-primary-400: #565620;
+$color-primary-500: #333300;
+
+// Fondo oscuro (el panel admin tendrá fondo oscuro tipo militar)
+$color-bg-dark:    #1a1a00;
+$color-bg-panel:   #242410;
+$color-bg-card:    #2e2e14;
+$color-bg-card-hover: #3a3a1a;
+$color-border:     #565620;
+$color-border-light: #7A7A40;
+
+// Texto
+$color-text-primary: #f5f5e8;
+$color-text-muted:   #9D9D60;
+$color-text-dark:    #333300;
+
+// Estados
+$color-success: #50ae4d;
+$color-danger:  #b63f49;
+$color-warning: #eac028;
+$color-info:    #396eae;
+
+// ==============================
+// CSS VARIABLES (para usar en componentes)
+// ==============================
+:root {
+  --primary-100: #{$color-primary-100};
+  --primary-200: #{$color-primary-200};
+  --primary-300: #{$color-primary-300};
+  --primary-400: #{$color-primary-400};
+  --primary-500: #{$color-primary-500};
+
+  --bg-dark:    #{$color-bg-dark};
+  --bg-panel:   #{$color-bg-panel};
+  --bg-card:    #{$color-bg-card};
+  --border:     #{$color-border};
+
+  --text-primary: #{$color-text-primary};
+  --text-muted:   #{$color-text-muted};
+
+  --success: #{$color-success};
+  --danger:  #{$color-danger};
+  --warning: #{$color-warning};
+  --info:    #{$color-info};
+}

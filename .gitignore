@@ -1,15 +1,17 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
 # Compiled output
 /dist
 /tmp
 /out-tsc
 /bazel-out
+.angular/cache/
+.cache/
 
 # Node
 /node_modules
 npm-debug.log
 yarn-error.log
+.pnp
+.pnp.js
 
 # IDEs and editors
 .idea/
@@ -19,6 +21,7 @@ yarn-error.log
 *.launch
 .settings/
 *.sublime-workspace
+*.swp
 
 # Visual Studio Code
 .vscode/*
@@ -42,3 +45,10 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+src/environments/environment.prod.ts
