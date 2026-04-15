@@ -1,0 +1,214 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Usuarios</h1>
+      <p class="page-subtitle">Gestiona los usuarios y roles de tu empresa</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModal()" [disabled]="cargando">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nuevo Usuario
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="alert alert-error">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = null">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando usuarios...</p>
+  </div>
+
+  <!-- Grid de usuarios -->
+  <div *ngIf="!cargando && usuarios.length > 0" class="usuarios-grid">
+    <div *ngFor="let usuario of usuarios" class="user-card">
+      <div class="card-top">
+        <div class="user-avatar">{{ getIniciales(usuario.nombre) }}</div>
+        <span class="role-chip" [ngClass]="getRolClass(usuario.rol)">
+          {{ usuario.rol === 'ADMIN_DEPARTAMENTO' ? 'Admin Depto' : 'Funcionario' }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <h3 class="card-title">{{ usuario.nombre }}</h3>
+        <div class="user-details">
+          <div class="detail-row">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <span>{{ usuario.email }}</span>
+          </div>
+          <div class="detail-row" *ngIf="usuario.departamentoId">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>{{ getNombreDepartamento(usuario.departamentoId) }}</span>
+          </div>
+          <div class="detail-row">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span class="status-dot" [class.dot-active]="usuario.activo" [class.dot-inactive]="!usuario.activo">
+              {{ usuario.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn-action btn-edit" (click)="abrirModal(usuario)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar
+        </button>
+        <button class="btn-action btn-delete" (click)="eliminar(usuario.id)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!cargando && usuarios.length === 0" class="empty-state">
+    <div class="empty-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <h3>No hay usuarios aun</h3>
+    <p>Crea el primer usuario de tu empresa</p>
+    <button class="btn btn-primary" (click)="abrirModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Crear Usuario
+    </button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editandoId ? 'Editar' : 'Nuevo' }} Usuario</h2>
+      <button class="btn-close-modal" (click)="cerrarModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="modal-form">
+      <!-- Nombre -->
+      <div class="form-group">
+        <label class="form-label">Nombre Completo <span class="required">*</span></label>
+        <input
+          type="text"
+          class="form-input"
+          formControlName="nombre"
+          placeholder="ej: Juan Perez"
+          [class.is-invalid]="form.get('nombre')?.invalid && form.get('nombre')?.touched"
+        />
+        <span class="form-error" *ngIf="form.get('nombre')?.invalid && form.get('nombre')?.touched">
+          <span *ngIf="form.get('nombre')?.errors?.['required']">Nombre requerido</span>
+          <span *ngIf="form.get('nombre')?.errors?.['minlength']">Minimo 3 caracteres</span>
+        </span>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label class="form-label">Email <span class="required">*</span></label>
+        <input
+          type="email"
+          class="form-input"
+          formControlName="email"
+          placeholder="usuario@empresa.com"
+          [attr.disabled]="!esNuevo ? '' : null"
+          [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
+        />
+        <span class="form-helper" *ngIf="!esNuevo">El email no se puede cambiar</span>
+        <span class="form-error" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">
+          <span *ngIf="form.get('email')?.errors?.['required']">Email requerido</span>
+          <span *ngIf="form.get('email')?.errors?.['email']">Email invalido</span>
+        </span>
+      </div>
+
+      <!-- Password (solo nuevo) -->
+      <div class="form-group" *ngIf="esNuevo">
+        <label class="form-label">Contrasena <span class="required">*</span></label>
+        <input
+          type="password"
+          class="form-input"
+          formControlName="password"
+          placeholder="Minimo 6 caracteres"
+          [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
+        />
+        <span class="form-error" *ngIf="form.get('password')?.invalid && form.get('password')?.touched">
+          <span *ngIf="form.get('password')?.errors?.['required']">Contrasena requerida</span>
+          <span *ngIf="form.get('password')?.errors?.['minlength']">Minimo 6 caracteres</span>
+        </span>
+      </div>
+
+      <!-- Rol -->
+      <div class="form-group">
+        <label class="form-label">Rol <span class="required">*</span></label>
+        <select
+          class="form-input"
+          formControlName="rol"
+          (change)="onRolChange()"
+          [class.is-invalid]="form.get('rol')?.invalid && form.get('rol')?.touched"
+        >
+          <option value="">-- Selecciona un rol --</option>
+          <option *ngFor="let rol of rolesDisponibles" [value]="rol.id">{{ rol.nombre }}</option>
+        </select>
+        <span class="form-error" *ngIf="form.get('rol')?.invalid && form.get('rol')?.touched">El rol es requerido</span>
+      </div>
+
+      <!-- Departamento (condicional) -->
+      <div class="form-group" *ngIf="form.get('rol')?.value === 'FUNCIONARIO'">
+        <label class="form-label">Departamento <span class="required">*</span></label>
+        <select
+          class="form-input"
+          formControlName="departamentoId"
+          [class.is-invalid]="form.get('departamentoId')?.invalid && form.get('departamentoId')?.touched"
+        >
+          <option value="">-- Selecciona un departamento --</option>
+          <option *ngFor="let depto of departamentos" [value]="depto.id">{{ depto.nombre }}</option>
+        </select>
+        <span class="form-helper" *ngIf="departamentos.length === 0">No hay departamentos. Crea uno primero.</span>
+        <span class="form-error" *ngIf="form.get('departamentoId')?.invalid && form.get('departamentoId')?.touched">
+          Departamento requerido para funcionarios
+        </span>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || cargando">
+          <span>{{ cargando ? 'Guardando...' : (editandoId ? 'Actualizar' : 'Crear') }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
