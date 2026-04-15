@@ -19,6 +19,7 @@ export class UsuariosComponent implements OnInit {
   mostrarModal = false;
   editandoId: string | null = null;
   cargando = false;
+  guardando = false;
   error: string | null = null;
   esNuevo = true;
 
@@ -124,10 +125,10 @@ export class UsuariosComponent implements OnInit {
       email: this.form.get('email')?.value,
       password: this.form.get('password')?.value,
       rol: rol,
-      departamentoId: rol === 'ADMIN_DEPARTAMENTO' ? null : deptoId
+      departamentoId: deptoId
     };
 
-    this.cargando = true;
+    this.guardando = true;
     this.error = null;
 
     const requestActualizacion: CrearUsuarioRequest = this.esNuevo
@@ -142,11 +143,11 @@ export class UsuariosComponent implements OnInit {
       next: () => {
         this.cargarUsuarios();
         this.cerrarModal();
-        this.cargando = false;
+        this.guardando = false;
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message || 'Error al guardar usuario';
-        this.cargando = false;
+        this.guardando = false;
       }
     });
   }
@@ -179,11 +180,11 @@ export class UsuariosComponent implements OnInit {
     const rol = this.form.get('rol')?.value;
     const deptoControl = this.form.get('departamentoId');
     
-    if (rol === 'ADMIN_DEPARTAMENTO') {
+    if (rol === 'ADMIN_DEPARTAMENTO' || rol === 'FUNCIONARIO') {
+      deptoControl?.setValidators([Validators.required]);
+    } else {
       deptoControl?.clearValidators();
       deptoControl?.setValue(null);
-    } else if (rol === 'FUNCIONARIO') {
-      deptoControl?.setValidators([Validators.required]);
     }
     deptoControl?.updateValueAndValidity();
   }

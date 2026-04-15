@@ -5,7 +5,7 @@
       <h1 class="page-title">Usuarios</h1>
       <p class="page-subtitle">Gestiona los usuarios y roles de tu empresa</p>
     </div>
-    <button class="btn btn-primary" (click)="abrirModal()" [disabled]="cargando">
+    <button class="btn btn-primary" (click)="abrirModal()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
@@ -187,7 +187,7 @@
       </div>
 
       <!-- Departamento (condicional) -->
-      <div class="form-group" *ngIf="form.get('rol')?.value === 'FUNCIONARIO'">
+      <div class="form-group" *ngIf="form.get('rol')?.value === 'FUNCIONARIO' || form.get('rol')?.value === 'ADMIN_DEPARTAMENTO'">
         <label class="form-label">Departamento <span class="required">*</span></label>
         <select
           class="form-input"
@@ -199,14 +199,14 @@
         </select>
         <span class="form-helper" *ngIf="departamentos.length === 0">No hay departamentos. Crea uno primero.</span>
         <span class="form-error" *ngIf="form.get('departamentoId')?.invalid && form.get('departamentoId')?.touched">
-          Departamento requerido para funcionarios
+          Departamento requerido para el rol seleccionado
         </span>
       </div>
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
-        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || cargando">
-          <span>{{ cargando ? 'Guardando...' : (editandoId ? 'Actualizar' : 'Crear') }}</span>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || guardando">
+          <span>{{ guardando ? 'Guardando...' : (editandoId ? 'Actualizar' : 'Crear') }}</span>
         </button>
       </div>
     </form>

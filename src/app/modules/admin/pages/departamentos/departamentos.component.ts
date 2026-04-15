@@ -19,6 +19,7 @@ export class DepartamentosComponent implements OnInit {
   mostrarModal = false;
   editandoId: string | null = null;
   cargando = false;
+  guardando = false;
   error: string | null = null;
 
   constructor(
@@ -42,7 +43,7 @@ export class DepartamentosComponent implements OnInit {
   }
 
   cargarDepartamentos(): void {
-    this.cargando = true;
+    this.guardando = true;
     this.error = null;
     this.deptoService.listar().subscribe({
       next: (res: ApiResponse<Departamento[]>) => {
@@ -97,7 +98,12 @@ export class DepartamentosComponent implements OnInit {
       return;
     }
 
-    const request: CrearDepartamentoRequest = this.form.value;
+    const request: CrearDepartamentoRequest = { ...this.form.value };
+    if (!request.adminDepartamentoId || request.adminDepartamentoId.trim() === '') {
+      // Si esta vacio, lo mandamos como undefined para que evite validar strings vacios como id
+      request.adminDepartamentoId = undefined;
+    }
+    
     this.cargando = true;
     this.error = null;
 
@@ -109,11 +115,11 @@ export class DepartamentosComponent implements OnInit {
       next: () => {
         this.cargarDepartamentos();
         this.cerrarModal();
-        this.cargando = false;
+        this.guardando = false;
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message || 'Error al guardar departamento';
-        this.cargando = false;
+        this.guardando = false;
       }
     });
   }
