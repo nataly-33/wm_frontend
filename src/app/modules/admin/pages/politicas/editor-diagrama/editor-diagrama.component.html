@@ -1,0 +1,89 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Editor de diagrama</h1>
+      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - Dia 4</p>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-secondary" (click)="exportarPng()">Exportar PNG</button>
+      <button class="btn btn-secondary" (click)="exportarPdf()">Exportar PDF</button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <section class="editor-top">
+    <form class="panel-light" [formGroup]="nodoForm" (ngSubmit)="crearNodo()">
+      <h3>Crear nodo</h3>
+      <div class="grid-3">
+        <input class="form-input light" formControlName="nombre" placeholder="Nombre del nodo" />
+        <select class="form-input light" formControlName="tipo">
+          <option *ngFor="let tipo of tiposNodo" [value]="tipo">{{ tipo }}</option>
+        </select>
+        <select class="form-input light" formControlName="departamentoId">
+          <option value="">Departamento</option>
+          <option *ngFor="let depto of departamentos" [value]="depto.id">{{ depto.nombre }}</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit" [disabled]="nodoForm.invalid">Agregar nodo</button>
+    </form>
+
+    <form class="panel-light" [formGroup]="transicionForm" (ngSubmit)="crearTransicion()">
+      <h3>Crear transicion</h3>
+      <div class="grid-3">
+        <select class="form-input light" formControlName="nodoOrigenId">
+          <option value="">Nodo origen</option>
+          <option *ngFor="let nodo of nodos" [value]="nodo.id">{{ nodo.nombre }}</option>
+        </select>
+        <select class="form-input light" formControlName="nodoDestinoId">
+          <option value="">Nodo destino</option>
+          <option *ngFor="let nodo of nodos" [value]="nodo.id">{{ nodo.nombre }}</option>
+        </select>
+        <select class="form-input light" formControlName="tipo">
+          <option *ngFor="let tipo of tiposTransicion" [value]="tipo">{{ tipo }}</option>
+        </select>
+      </div>
+      <div class="grid-2">
+        <input class="form-input light" formControlName="etiqueta" placeholder="Etiqueta (opcional)" />
+        <input class="form-input light" formControlName="condicion" placeholder="Condicion (opcional)" />
+      </div>
+      <button class="btn btn-primary" type="submit" [disabled]="transicionForm.invalid">Agregar transicion</button>
+    </form>
+  </section>
+
+  <section class="panel-light canvas-wrapper">
+    <h3>Canvas con swimlanes por departamento</h3>
+    <div class="canvas" #canvasRef>
+      <div class="lane" *ngFor="let depto of departamentos; let i = index" [style.top.px]="i * 180">
+        <span class="lane-label">{{ depto.nombre }}</span>
+      </div>
+
+      <article
+        class="node-card"
+        *ngFor="let nodo of nodos"
+        [style.left.px]="nodo.posicionX"
+        [style.top.px]="nodo.posicionY"
+        (mousedown)="iniciarDrag($event, nodo)"
+      >
+        <header>
+          <strong>{{ nodo.nombre }}</strong>
+          <span>{{ nodo.tipo }}</span>
+        </header>
+        <p>{{ getDepartamentoNombre(nodo.departamentoId) }}</p>
+        <button class="btn btn-danger mini" (click)="eliminarNodo(nodo.id)">Eliminar</button>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel-light">
+    <h3>Transiciones</h3>
+    <div class="transition-list">
+      <div class="transition-row" *ngFor="let t of transiciones">
+        <span>{{ t.nodoOrigenId }} -> {{ t.nodoDestinoId }}</span>
+        <span>{{ t.tipo }}</span>
+        <span>{{ t.etiqueta || '-' }}</span>
+        <button class="btn btn-danger mini" (click)="eliminarTransicion(t.id)">Eliminar</button>
+      </div>
+    </div>
+  </section>
+</div>
