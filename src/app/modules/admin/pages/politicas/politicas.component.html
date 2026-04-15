@@ -1,0 +1,73 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Politicas de negocio</h1>
+      <p class="page-subtitle">Dia 3: crea, activa y administra el flujo</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModal()">
+      Nueva politica
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = null">x</button>
+  </div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando politicas...</p>
+  </div>
+
+  <div class="cards-grid" *ngIf="!cargando && politicas.length > 0">
+    <article class="policy-card" *ngFor="let politica of politicas">
+      <header class="policy-head">
+        <h3>{{ politica.nombre }}</h3>
+        <span [class]="getEstadoClass(politica.estado)">{{ politica.estado }}</span>
+      </header>
+      <p>{{ politica.descripcion }}</p>
+      <div class="meta">
+        <span>Version {{ politica.version }}</span>
+        <span>{{ politica.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" (click)="abrirModal(politica)">Editar</button>
+        <button class="btn btn-secondary" (click)="cambiarEstado(politica)">
+          {{ politica.estado === 'ACTIVA' ? 'Desactivar' : 'Activar' }}
+        </button>
+        <button class="btn btn-primary" (click)="irEditor(politica.id)">Editor de diagrama</button>
+        <button class="btn btn-danger" (click)="eliminar(politica.id)">Eliminar</button>
+      </div>
+    </article>
+  </div>
+
+  <div *ngIf="!cargando && politicas.length === 0" class="empty-state">
+    <h3>No hay politicas registradas</h3>
+    <p>Crea la primera politica para continuar con Dia 4</p>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editandoId ? 'Editar politica' : 'Nueva politica' }}</h2>
+      <button class="btn-close-modal" (click)="cerrarModal()">x</button>
+    </div>
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input class="form-input" formControlName="nombre" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripcion</label>
+        <textarea class="form-input form-textarea" formControlName="descripcion" rows="4"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn btn-primary" type="submit" [disabled]="guardando || form.invalid">
+          {{ guardando ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
