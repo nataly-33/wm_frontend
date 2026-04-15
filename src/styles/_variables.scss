@@ -1,0 +1,79 @@
+// ================================================
+// VARIABLES DE COLOR — WorkflowManager
+// Paleta: Verde Oliva Oscuro (Military/Tactical)
+// ================================================
+
+// SCSS vars
+$primary-100: #C0C080;
+$primary-200: #9D9D60;
+$primary-300: #7A7A40;
+$primary-400: #565620;
+$primary-500: #333300;
+
+$bg-dark:    #1a1a00;
+$bg-panel:   #222212;
+$bg-card:    #2c2c12;
+$bg-card-hover: #363618;
+$bg-surface: #1f1f0a;
+
+$border:        #4a4a1e;
+$border-light:  #6a6a30;
+
+$text-primary: #f0f0e0;
+$text-muted:   #9D9D60;
+$text-dark:    #333300;
+
+$success: #6BD968;
+$danger:  #F44250;
+$warning: #FECC1B;
+$info:    #3992FF;
+
+// Breakpoints
+$mobile:  480px;
+$tablet:  768px;
+$desktop: 1024px;
+
+// ================================================
+// CSS CUSTOM PROPERTIES
+// ================================================
+:root {
+  --primary-100: #{$primary-100};
+  --primary-200: #{$primary-200};
+  --primary-300: #{$primary-300};
+  --primary-400: #{$primary-400};
+  --primary-500: #{$primary-500};
+
+  --bg-dark:    #{$bg-dark};
+  --bg-panel:   #{$bg-panel};
+  --bg-card:    #{$bg-card};
+  --bg-card-hover: #{$bg-card-hover};
+  --bg-surface: #{$bg-surface};
+
+  --border:       #{$border};
+  --border-light: #{$border-light};
+
+  --text-primary: #{$text-primary};
+  --text-muted:   #{$text-muted};
+
+  --success: #{$success};
+  --danger:  #{$danger};
+  --warning: #{$warning};
+  --info:    #{$info};
+
+  // Sombras
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.25);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.5);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.6);
+
+  // Radius
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 24px;
+
+  // Transitions
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
