@@ -1,8 +1,15 @@
-<app-navbar [userName]="userName"></app-navbar>
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Panel Admin Departamento</h1>
+      <p class="page-subtitle">Bienvenido, {{ userName }}</p>
+    </div>
+    <button class="btn btn-danger" (click)="logout()">Salir</button>
+  </div>
 
-<div class="dashboard-container">
-  <app-sidebar [items]="sidebarItems"></app-sidebar>
-  <main class="dashboard-content">
-    <!-- Contenido será agregado aquí -->
-  </main>
+  <div class="action-card">
+    <h3>Gestion de formularios</h3>
+    <p>Crea y edita formularios dinamicos para nodos de tu departamento.</p>
+    <a class="btn btn-primary" routerLink="/admin-depto/formularios">Ir a formularios</a>
+  </div>
 </div>
