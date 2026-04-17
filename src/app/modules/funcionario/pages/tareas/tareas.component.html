@@ -1,0 +1,34 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mis Tareas</h1>
+      <p class="page-subtitle">Tareas pendientes de tu departamento</p>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando tareas...</p>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    <span>{{ error }}</span>
+  </div>
+
+  <div *ngIf="!cargando && tareas.length === 0" class="empty-state">
+    <h3>No hay tareas pendientes</h3>
+    <p>¡Buen trabajo! Todo está al día.</p>
+  </div>
+
+  <div *ngIf="!cargando && tareas.length > 0" class="tareas-list">
+    <div *ngFor="let tarea of tareas" class="tarea-card">
+      <div class="tarea-info">
+        <h3>ID Tarea: {{ tarea.id | slice:0:8 }}...</h3>
+        <p>Iniciada: {{ tarea.iniciadoEn | date:'short' }}</p>
+      </div>
+      <div class="tarea-actions">
+        <a [routerLink]="['/funcionario/ejecutar-tarea', tarea.id]" class="btn btn-primary">Ejecutar</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<div class="page-container">
+  <div class="page-header">
+    <button class="btn btn-secondary" routerLink="/funcionario/tareas">← Volver</button>
+    <div>
+      <h1 class="page-title">Ejecutar Tarea</h1>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    <span>{{ error }}</span>
+  </div>
+
+  <div class="form-container">
+    <h3>Rellenar Formulario</h3>
+    <p>Simulación de campos del formulario del nodo.</p>
+    
+    <div class="form-group">
+      <label class="form-label">Respuesta (Ej. "Aprobado", "Rechazado" para una Decisión ALTERNATIVA)</label>
+      <input type="text" class="form-input" [(ngModel)]="respuesta['decision']" placeholder="Escribe tu decision">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Observaciones (Requerido solo para rechazar tarea firmemente)</label>
+      <textarea class="form-input" [(ngModel)]="observaciones" rows="3"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" (click)="completar()" [disabled]="guardando">✅ Completar</button>
+      <button class="btn btn-danger" (click)="rechazar()" [disabled]="guardando">❌ Rechazar</button>
+    </div>
+  </div>
+</div>
