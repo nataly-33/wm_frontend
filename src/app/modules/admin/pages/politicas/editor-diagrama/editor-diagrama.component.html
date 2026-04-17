@@ -1,89 +1,134 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="page-title">Editor de diagrama</h1>
-      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - Dia 4</p>
+      <h1 class="page-title">Editor UML 2.5 - Activity Diagram</h1>
+      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - arrastra, conecta y guarda</p>
     </div>
     <div class="toolbar-actions">
+      <button class="btn btn-primary" (click)="guardarDiagrama()" [disabled]="guardando || cargando">
+        {{ guardando ? 'Guardando...' : 'Guardar diagrama' }}
+      </button>
       <button class="btn btn-secondary" (click)="exportarPng()">Exportar PNG</button>
       <button class="btn btn-secondary" (click)="exportarPdf()">Exportar PDF</button>
     </div>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
-  <section class="editor-top">
-    <form class="panel-light" [formGroup]="nodoForm" (ngSubmit)="crearNodo()">
-      <h3>Crear nodo</h3>
-      <div class="grid-3">
-        <input class="form-input light" formControlName="nombre" placeholder="Nombre del nodo" />
-        <select class="form-input light" formControlName="tipo">
-          <option *ngFor="let tipo of tiposNodo" [value]="tipo">{{ tipo }}</option>
-        </select>
-        <select class="form-input light" formControlName="departamentoId">
-          <option value="">Departamento</option>
-          <option *ngFor="let depto of departamentos" [value]="depto.id">{{ depto.nombre }}</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" type="submit" [disabled]="nodoForm.invalid">Agregar nodo</button>
-    </form>
-
-    <form class="panel-light" [formGroup]="transicionForm" (ngSubmit)="crearTransicion()">
-      <h3>Crear transicion</h3>
-      <div class="grid-3">
-        <select class="form-input light" formControlName="nodoOrigenId">
-          <option value="">Nodo origen</option>
-          <option *ngFor="let nodo of nodos" [value]="nodo.id">{{ nodo.nombre }}</option>
-        </select>
-        <select class="form-input light" formControlName="nodoDestinoId">
-          <option value="">Nodo destino</option>
-          <option *ngFor="let nodo of nodos" [value]="nodo.id">{{ nodo.nombre }}</option>
-        </select>
-        <select class="form-input light" formControlName="tipo">
-          <option *ngFor="let tipo of tiposTransicion" [value]="tipo">{{ tipo }}</option>
-        </select>
-      </div>
-      <div class="grid-2">
-        <input class="form-input light" formControlName="etiqueta" placeholder="Etiqueta (opcional)" />
-        <input class="form-input light" formControlName="condicion" placeholder="Condicion (opcional)" />
-      </div>
-      <button class="btn btn-primary" type="submit" [disabled]="transicionForm.invalid">Agregar transicion</button>
-    </form>
-  </section>
-
-  <section class="panel-light canvas-wrapper">
-    <h3>Canvas con swimlanes por departamento</h3>
-    <div class="canvas" #canvasRef>
-      <div class="lane" *ngFor="let depto of departamentos; let i = index" [style.top.px]="i * 180">
-        <span class="lane-label">{{ depto.nombre }}</span>
-      </div>
-
-      <article
-        class="node-card"
-        *ngFor="let nodo of nodos"
-        [style.left.px]="nodo.posicionX"
-        [style.top.px]="nodo.posicionY"
-        (mousedown)="iniciarDrag($event, nodo)"
+  <section class="editor-layout">
+    <aside class="stencil panel-light">
+      <h3>Paleta UML</h3>
+      <div
+        class="stencil-item"
+        *ngFor="let tipo of tiposNodo"
+        draggable="true"
+        (dragstart)="onPaletteDragStart($event, tipo)"
       >
-        <header>
-          <strong>{{ nodo.nombre }}</strong>
-          <span>{{ nodo.tipo }}</span>
-        </header>
-        <p>{{ getDepartamentoNombre(nodo.departamentoId) }}</p>
-        <button class="btn btn-danger mini" (click)="eliminarNodo(nodo.id)">Eliminar</button>
-      </article>
-    </div>
-  </section>
-
-  <section class="panel-light">
-    <h3>Transiciones</h3>
-    <div class="transition-list">
-      <div class="transition-row" *ngFor="let t of transiciones">
-        <span>{{ t.nodoOrigenId }} -> {{ t.nodoDestinoId }}</span>
-        <span>{{ t.tipo }}</span>
-        <span>{{ t.etiqueta || '-' }}</span>
-        <button class="btn btn-danger mini" (click)="eliminarTransicion(t.id)">Eliminar</button>
+        <div class="shape-preview" [ngClass]="getNodeShapeClass(tipo)"></div>
+        <div class="shape-info">
+          <strong>{{ tipo }}</strong>
+          <span>{{ getNodeLabel(tipo) }}</span>
+        </div>
       </div>
-    </div>
+
+      <hr />
+      <h3>Swimlanes</h3>
+      <button class="btn btn-secondary lane-button" (click)="mostrarMenuCarriles = !mostrarMenuCarriles">
+        + Agregar carril
+      </button>
+      <div *ngIf="mostrarMenuCarriles" class="lane-menu">
+        <button
+          class="lane-option"
+          *ngFor="let depto of departamentosDisponiblesParaCarril"
+          (click)="agregarCarril(depto)"
+        >
+          {{ depto.nombre }}
+        </button>
+        <p *ngIf="departamentosDisponiblesParaCarril.length === 0">No hay mas departamentos disponibles.</p>
+      </div>
+    </aside>
+
+    <section class="panel-light canvas-wrapper">
+      <div class="canvas-toolbar">
+        <span>Arrastra formas desde la paleta y sueltalas en un carril.</span>
+        <button *ngIf="conectandoDesdeId" class="btn btn-secondary mini" (click)="cancelarConexion()">
+          Cancelar conexion
+        </button>
+      </div>
+
+      <div
+        class="canvas"
+        #canvasRef
+        [style.height.px]="canvasHeight"
+        [style.width.px]="canvasWidth"
+        (dragover)="permitirDrop($event)"
+        (drop)="onCanvasDrop($event)"
+        (click)="limpiarSeleccion()"
+      >
+        <div class="lane" *ngFor="let depto of departamentosVisibles; let i = index" [style.top.px]="laneTop(i)">
+          <div class="lane-header">
+            <span class="lane-label">{{ depto.nombre }}</span>
+            <button class="lane-remove" (click)="quitarCarril(depto.id); $event.stopPropagation()">x</button>
+          </div>
+        </div>
+
+        <svg class="links-layer" [attr.width]="canvasWidth" [attr.height]="canvasHeight">
+          <defs>
+            <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#7b7b5c"></polygon>
+            </marker>
+          </defs>
+
+          <g *ngFor="let t of transiciones">
+            <path
+              [attr.d]="getTransitionPath(t)"
+              [class.link-selected]="transicionSeleccionadaId === t.id"
+              class="link-path"
+              marker-end="url(#arrowHead)"
+              (click)="seleccionarTransicion($event, t.id)"
+            ></path>
+            <text [attr.x]="getTransitionLabelX(t)" [attr.y]="getTransitionLabelY(t)" class="link-label">
+              {{ t.tipo }}
+            </text>
+          </g>
+        </svg>
+
+        <article
+          class="node-card"
+          *ngFor="let nodo of nodos"
+          [style.left.px]="nodo.posicionX"
+          [style.top.px]="nodo.posicionY"
+          [class.node-selected]="nodoSeleccionadoId === nodo.id"
+          (mousedown)="iniciarDrag($event, nodo)"
+          (click)="seleccionarNodo(nodo.id); $event.stopPropagation()"
+        >
+          <div class="node-shape" [ngClass]="getNodeShapeClass(nodo.tipo)"></div>
+          <div class="node-text">
+            <strong>{{ nodo.nombre }}</strong>
+            <small>{{ nodo.tipo }} - {{ getDepartamentoNombre(nodo.departamentoId) }}</small>
+          </div>
+          <button class="node-action connect" title="Conectar" (click)="iniciarConexion($event, nodo.id)">-></button>
+          <button class="node-action delete" title="Eliminar" (click)="eliminarNodo(nodo.id); $event.stopPropagation()">x</button>
+        </article>
+      </div>
+
+      <div class="selection-toolbar" *ngIf="transicionSeleccionadaId || nodoSeleccionadoId">
+        <button
+          *ngIf="transicionSeleccionadaId"
+          class="btn btn-danger mini"
+          (click)="eliminarTransicion(transicionSeleccionadaId!)"
+        >
+          Eliminar transicion seleccionada
+        </button>
+        <button
+          *ngIf="nodoSeleccionadoId"
+          class="btn btn-danger mini"
+          (click)="eliminarNodo(nodoSeleccionadoId!)"
+        >
+          Eliminar nodo seleccionado
+        </button>
+      </div>
+    </section>
   </section>
 </div>
