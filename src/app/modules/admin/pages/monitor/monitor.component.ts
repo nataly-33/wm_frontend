@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
 import { SocketService } from '../../../../core/services/socket.service';
@@ -24,10 +25,12 @@ export class MonitorComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargando = true;
-    this.politicaService.listar().subscribe({
+    this.politicaService.listar().pipe(
+      timeout(15000),
+      finalize(() => this.cargando = false)
+    ).subscribe({
       next: (res: ApiResponse<Politica[]>) => {
         this.politicas = res.data ?? [];
-        this.cargando = false;
         // Suscribirse a web sockets para politicas activas
         this.politicas.forEach(p => {
           if (p.estado === 'ACTIVA') {
@@ -41,7 +44,6 @@ export class MonitorComponent implements OnInit {
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message ?? 'No se pudo cargar monitor';
-        this.cargando = false;
       }
     });
   }

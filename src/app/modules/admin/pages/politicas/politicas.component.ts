@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
 import { CrearPoliticaRequest, Politica, PoliticaService } from '../../../../core/services/politica.service';
 
@@ -38,14 +39,15 @@ export class PoliticasComponent implements OnInit {
   cargar(): void {
     this.cargando = true;
     this.error = null;
-    this.politicaService.listar().subscribe({
+    this.politicaService.listar().pipe(
+      timeout(15000),
+      finalize(() => this.cargando = false)
+    ).subscribe({
       next: (res: ApiResponse<Politica[]>) => {
         this.politicas = res.data ?? [];
-        this.cargando = false;
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message ?? 'Error al cargar politicas';
-        this.cargando = false;
       }
     });
   }
