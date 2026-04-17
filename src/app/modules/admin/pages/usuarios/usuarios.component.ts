@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize, timeout } from 'rxjs';
 import { UsuarioService, Usuario, CrearUsuarioRequest } from '../../../../core/services/usuario.service';
 import { DepartamentoService, Departamento } from '../../../../core/services/departamento.service';
 import { ApiResponse } from '../../../../core/models/api-response.model';
@@ -53,14 +54,15 @@ export class UsuariosComponent implements OnInit {
   cargarUsuarios(): void {
     this.cargando = true;
     this.error = null;
-    this.usuarioService.listar().subscribe({
+    this.usuarioService.listar().pipe(
+      timeout(15000),
+      finalize(() => this.cargando = false)
+    ).subscribe({
       next: (res: ApiResponse<Usuario[]>) => {
         this.usuarios = res.data ?? [];
-        this.cargando = false;
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message || 'Error al cargar usuarios';
-        this.cargando = false;
       }
     });
   }
