@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize, timeout } from 'rxjs';
 import { DepartamentoService, Departamento, CrearDepartamentoRequest } from '../../../../core/services/departamento.service';
 import { UsuarioService, Usuario } from '../../../../core/services/usuario.service';
 import { ApiResponse } from '../../../../core/models/api-response.model';
@@ -43,16 +44,17 @@ export class DepartamentosComponent implements OnInit {
   }
 
   cargarDepartamentos(): void {
-    this.guardando = true;
+    this.cargando = true;
     this.error = null;
-    this.deptoService.listar().subscribe({
+    this.deptoService.listar().pipe(
+      timeout(15000),
+      finalize(() => this.cargando = false)
+    ).subscribe({
       next: (res: ApiResponse<Departamento[]>) => {
         this.departamentos = res.data ?? [];
-        this.cargando = false;
       },
       error: (err: { error?: { message?: string } }) => {
         this.error = err?.error?.message || 'Error al cargar departamentos';
-        this.cargando = false;
       }
     });
   }
@@ -101,10 +103,10 @@ export class DepartamentosComponent implements OnInit {
     const request: CrearDepartamentoRequest = { ...this.form.value };
     if (!request.adminDepartamentoId || request.adminDepartamentoId.trim() === '') {
       // Si esta vacio, lo mandamos como undefined para que evite validar strings vacios como id
-      request.adminDepartamentoId = undefined;
+      delete (request as any).adminDepartamentoId;
     }
     
-    this.cargando = true;
+    this.guardando = true;
     this.error = null;
 
     const operacion = this.editandoId
