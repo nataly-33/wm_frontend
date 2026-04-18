@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize, timeout } from 'rxjs';
+import { filter, finalize, take, timeout } from 'rxjs';
 import { DepartamentoService, Departamento, CrearDepartamentoRequest } from '../../../../core/services/departamento.service';
 import { UsuarioService, Usuario } from '../../../../core/services/usuario.service';
 import { ApiResponse } from '../../../../core/models/api-response.model';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-departamentos',
@@ -16,6 +17,7 @@ import { ApiResponse } from '../../../../core/models/api-response.model';
 export class DepartamentosComponent implements OnInit {
   departamentos: Departamento[] = [];
   usuarios: Usuario[] = [];
+  todosLosUsuarios: Usuario[] = [];
   form!: FormGroup;
   mostrarModal = false;
   editandoId: string | null = null;
@@ -26,13 +28,19 @@ export class DepartamentosComponent implements OnInit {
   constructor(
     private deptoService: DepartamentoService,
     private usuarioService: UsuarioService,
+    private authService: AuthService,
     private fb: FormBuilder
   ) {}
 
   ngOnInit(): void {
     this.inicializarForm();
-    this.cargarDepartamentos();
-    this.cargarUsuarios();
+    this.authService.getCurrentUser$().pipe(
+      filter((user): user is NonNullable<typeof user> => !!user && !!user.empresaId),
+      take(1)
+    ).subscribe(() => {
+      this.cargarDepartamentos();
+      this.cargarUsuarios();
+    });
   }
 
   inicializarForm(): void {
@@ -62,8 +70,9 @@ export class DepartamentosComponent implements OnInit {
   cargarUsuarios(): void {
     this.usuarioService.listar().subscribe({
       next: (res: ApiResponse<Usuario[]>) => {
+        this.todosLosUsuarios = res.data ?? [];
         // Filtrar solo ADMIN_DEPARTAMENTO disponibles
-        this.usuarios = (res.data ?? []).filter((u: Usuario) =>
+        this.usuarios = this.todosLosUsuarios.filter((u: Usuario) =>
           u.rol === 'ADMIN_DEPARTAMENTO' && u.activo === true
         );
       },
@@ -127,6 +136,13 @@ export class DepartamentosComponent implements OnInit {
   }
 
   eliminar(id: string): void {
+    // Validar front si tiene usuarios asignados
+    const tieneUsuarios = this.todosLosUsuarios.some(u => u.departamentoId === id);
+    if (tieneUsuarios) {
+      this.error = 'No se puede eliminar, tiene usuarios asignados';
+      return;
+    }
+
     if (confirm('¿Estás seguro de que deseas eliminar este departamento?')) {
       this.deptoService.eliminar(id).subscribe({
         next: () => {
