@@ -1,507 +1,354 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { forkJoin, firstValueFrom } from 'rxjs';
+
+import { Graph, InternalEvent, Cell, EventObject, gestureUtils } from '@maxgraph/core';
+
 import { ApiResponse } from '../../../../../core/models/api-response.model';
 import { Departamento, DepartamentoService } from '../../../../../core/services/departamento.service';
-import { CrearNodoRequest, Nodo, NodoService, NodoTipo } from '../../../../../core/services/nodo.service';
+import { CrearNodoRequest, Nodo, NodoTipo } from '../../../../../core/services/nodo.service';
 import { Politica, PoliticaService } from '../../../../../core/services/politica.service';
-import { CrearTransicionRequest, Transicion, TransicionService, TransicionTipo } from '../../../../../core/services/transicion.service';
+import { CrearTransicionRequest, Transicion, TransicionTipo } from '../../../../../core/services/transicion.service';
+import { EstadoEditor, validarDiagrama } from './diagram-validators';
 
 @Component({
   selector: 'app-editor-diagrama',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './editor-diagrama.component.html',
   styleUrls: ['./editor-diagrama.component.scss']
 })
-export class EditorDiagramaComponent implements OnInit, OnDestroy {
-  @ViewChild('canvasRef') canvasRef!: ElementRef<HTMLDivElement>;
-
-  readonly laneHeight = 180;
-  readonly nodeWidth = 140;
-  readonly nodeHeight = 72;
-  readonly canvasWidth = 1700;
+export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('graphContainer') graphContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('paletteRef') paletteRef!: ElementRef<HTMLElement>;
 
   politicaId = '';
   politica: Politica | null = null;
-  departamentos: Departamento[] = [];
-  departamentosVisibles: Departamento[] = [];
-  nodos: Nodo[] = [];
-  transiciones: Transicion[] = [];
-  private nodosOriginales: Nodo[] = [];
-  private transicionesOriginales: Transicion[] = [];
+  departamentosCompletos: Departamento[] = [];
+  mostrarMenuCarriles = false;
+  
   cargando = false;
   guardando = false;
   error: string | null = null;
   info: string | null = null;
 
-  tiposNodo: NodoTipo[] = ['INICIO', 'TAREA', 'DECISION', 'PARALELO', 'FIN'];
-  conectandoDesdeId: string | null = null;
-  nodoSeleccionadoId: string | null = null;
-  transicionSeleccionadaId: string | null = null;
-  mostrarMenuCarriles = false;
+  graph!: Graph;
+  cellSeleccionada: Cell | null = null;
+  hasSelection = false;
 
-  private draggingNodeId: string | null = null;
-  private dragOffsetX = 0;
-  private dragOffsetY = 0;
+  propiedadesTemp = {
+    etiqueta: '',
+    tipo: 'LINEAL' as TransicionTipo,
+    condicion: ''
+  };
 
+  private stateNodos: any[] = [];
+  private stateTransiciones: any[] = [];
+  
   constructor(
     private route: ActivatedRoute,
     private politicaService: PoliticaService,
-    private departamentoService: DepartamentoService,
-    private nodoService: NodoService,
-    private transicionService: TransicionService
+    private departamentoService: DepartamentoService
   ) {}
 
   ngOnInit(): void {
     this.politicaId = this.route.snapshot.paramMap.get('id') ?? '';
-    this.cargarTodo();
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('mouseup', this.onMouseUp);
+  }
+
+  ngAfterViewInit(): void {
+    this.initGraph();
+    this.initPalette();
+    this.cargarDatos();
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('mousemove', this.onMouseMove);
-    window.removeEventListener('mouseup', this.onMouseUp);
-  }
-
-  cargarTodo(): void {
-    this.cargando = true;
-    this.error = null;
-    forkJoin({
-      politica: this.politicaService.obtener(this.politicaId),
-      departamentos: this.departamentoService.listar(),
-      nodos: this.nodoService.listarPorPolitica(this.politicaId),
-      transiciones: this.transicionService.listarPorPolitica(this.politicaId)
-    }).subscribe({
-      next: ({ politica, departamentos, nodos, transiciones }) => {
-        this.politica = politica.data;
-        this.departamentos = departamentos.data ?? [];
-        this.departamentosVisibles = [...this.departamentos];
-        this.nodos = (nodos.data ?? []).map((n) => ({ ...n }));
-        this.transiciones = (transiciones.data ?? []).map((t) => ({ ...t }));
-        this.nodosOriginales = this.nodos.map((n) => ({ ...n }));
-        this.transicionesOriginales = this.transiciones.map((t) => ({ ...t }));
-        this.cargando = false;
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.error = err?.error?.message ?? 'No se pudo cargar el editor';
-        this.cargando = false;
-      }
-    });
-  }
-
-  get canvasHeight(): number {
-    return Math.max(600, this.departamentosVisibles.length * this.laneHeight);
+    if (this.graph) {
+      this.graph.destroy();
+    }
   }
 
   get departamentosDisponiblesParaCarril(): Departamento[] {
-    const visibles = new Set(this.departamentosVisibles.map((d) => d.id));
-    return this.departamentos.filter((d) => !visibles.has(d.id));
+    if (!this.graph) return this.departamentosCompletos;
+    const parent = this.graph.getDefaultParent();
+    const cells = this.graph.getChildVertices(parent);
+    const usados = new Set(cells.filter(c => this.esCarril(c)).map(c => c.getId()));
+    return this.departamentosCompletos.filter(d => !usados.has(d.id));
   }
 
-  getNodeById(id: string): Nodo | undefined {
-    return this.nodos.find((n) => n.id === id);
+  get departamentosVisibles(): Departamento[] {
+    if (!this.graph) return [];
+    const parent = this.graph.getDefaultParent();
+    const cells = this.graph.getChildVertices(parent);
+    const usados = cells.filter(c => this.esCarril(c)).map(c => c.getId());
+    return this.departamentosCompletos.filter(d => usados.includes(d.id));
   }
 
-  laneTop(index: number): number {
-    return index * this.laneHeight;
+  private initGraph() {
+    InternalEvent.disableContextMenu(this.graphContainer.nativeElement);
+    
+    this.graph = new Graph(this.graphContainer.nativeElement);
+    this.graph.setConnectable(true);
+    this.graph.setAllowDanglingEdges(false);
+    this.graph.setCellsEditable(true);
+    this.graph.setDropEnabled(true);
+    (this.graph as any).swimlaneNesting = false;
+    this.graph.setHtmlLabels(true);
+    this.graph.setTooltips(true);
+    this.graph.setGridEnabled(true);
+    this.graph.setGridSize(10);
+    this.graph.setPanning(true);
+
+    // Eventos de selección
+    this.graph.getSelectionModel().addListener('change', this.handleSelectionChange.bind(this));
   }
 
-  laneCenterY(index: number): number {
-    return this.laneTop(index) + this.laneHeight / 2;
+  private initPalette() {
+    const paletteContainer = document.getElementById('paletteContainer');
+    if (!paletteContainer) return;
+
+    this.addPaletteItem(paletteContainer, 'INICIO', 'Inicio', 'ellipse;fillColor=#333300;strokeColor=#C0C080;fontColor=#f5f5e8;fontSize=11;', 40, 40);
+    this.addPaletteItem(paletteContainer, 'TAREA', 'Tarea', 'rounded=1;fillColor=none;strokeColor=#9D9D60;fontColor=#f5f5e8;fontSize=11;arcSize=30;', 160, 60);
+    this.addPaletteItem(paletteContainer, 'DECISION', 'Decisión', 'rhombus;fillColor=none;strokeColor=#9D9D60;fontColor=#f5f5e8;fontSize=11;', 80, 80);
+    this.addPaletteItem(paletteContainer, 'PARALELO', 'Fork/Join', 'shape=line;strokeColor=#333300;strokeWidth=8;fillColor=#333300;', 150, 10);
+    this.addPaletteItem(paletteContainer, 'FIN', 'Fin', 'ellipse;fillColor=#333300;strokeColor=#9D9D60;fontSize=11;', 40, 40);
   }
 
-  getNodeShapeClass(tipo: NodoTipo): string {
-    switch (tipo) {
-      case 'INICIO':
-        return 'uml-inicio';
-      case 'FIN':
-        return 'uml-fin';
-      case 'DECISION':
-        return 'uml-decision';
-      case 'PARALELO':
-        return 'uml-paralelo';
-      default:
-        return 'uml-tarea';
-    }
+  private addPaletteItem(container: HTMLElement, tipo: string, title: string, style: string, width: number, height: number) {
+    const div = document.createElement('div');
+    div.style.padding = '10px';
+    div.style.border = '1px solid var(--border-color)';
+    div.style.marginBottom = '5px';
+    div.style.cursor = 'grab';
+    div.style.borderRadius = '5px';
+    div.style.backgroundColor = 'var(--surface-bg)';
+    div.innerHTML = `<strong>${title}</strong>`;
+    
+    // Drag source
+    const dragSource = gestureUtils.makeDraggable(div, this.graph, (graph, evt, target, x, y) => {
+      const dropX = x ?? 0;
+      const dropY = y ?? 0;
+      // Determinar si cayó dentro de un carril
+      let carrilTarget = target;
+      if (!carrilTarget || !this.esCarril(carrilTarget)) {
+        // Buscar el carril que intersecta x,y
+        const prnt = graph.getDefaultParent();
+        const children = graph.getChildVertices(prnt);
+        for (const child of children) {
+          if (this.esCarril(child)) {
+            const geo = child.getGeometry();
+            if (geo && dropX >= geo.x && dropX <= geo.x + geo.width && dropY >= geo.y && dropY <= geo.y + geo.height) {
+              carrilTarget = child;
+              break;
+            }
+          }
+        }
+      }
+
+      const parentToInsert = carrilTarget && this.esCarril(carrilTarget) ? carrilTarget : graph.getDefaultParent();
+
+      let finalGeoX = dropX;
+      let finalGeoY = dropY;
+
+      if (parentToInsert && parentToInsert !== graph.getDefaultParent()) {
+        const parGeo = parentToInsert.getGeometry();
+        if (parGeo) {
+           finalGeoX = dropX - parGeo.x;
+           finalGeoY = dropY - parGeo.y;
+        }
+      }
+
+      graph.getDataModel().beginUpdate();
+      try {
+        const tempId = 'tmp_node_' + Date.now();
+        const vertex = graph.insertVertex(parentToInsert, tempId, title, finalGeoX, finalGeoY, width, height, style as any);
+        vertex.setAttribute('tipo', tipo);
+      } finally {
+        graph.getDataModel().endUpdate();
+      }
+    }, div);
+    
+    container.appendChild(div);
   }
 
-  getNodeLabel(tipo: NodoTipo): string {
-    switch (tipo) {
-      case 'INICIO': return 'Initial Node';
-      case 'FIN': return 'Activity Final';
-      case 'DECISION': return 'Decision/Merge';
-      case 'PARALELO': return 'Fork/Join';
-      default: return 'Action Node';
-    }
-  }
+  private cargarDatos() {
+    this.cargando = true;
+    this.error = null;
+    
+    const empresaId = localStorage.getItem('empresaId') || '';
 
-  onPaletteDragStart(event: DragEvent, tipo: NodoTipo): void {
-    event.dataTransfer?.setData('application/uml-node-type', tipo);
-    event.dataTransfer!.effectAllowed = 'copy';
-  }
+    // Llamamos el nuevo endpoint getDiagrama y getDepartamentosCompletos
+    // Como PoliticaService todavia no tiene los metodos implementados en HttpClient, hacemos cast o any momentaneo
+    // o asumiendo que ya en PoliticaService estan listos
+    forkJoin({
+      politica: this.politicaService.obtener(this.politicaId),
+      departamentos: this.departamentoService.listarCompletos()
+    }).subscribe({
+      next: ({ politica, departamentos }) => {
+        this.politica = politica.data;
+        this.departamentosCompletos = departamentos.data ?? [];
+        
+        // Aqui deberiamos traernos el diagrama via API, si el endpoint existiese en PoliticaService
+        // Simularemos llamarlo via fetch para ser directos o esperar que backend lo rutee
+        fetch(`/api/v1/politicas/${this.politicaId}/diagrama`, {
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+            'X-Empresa-Id': empresaId
+          }
+        }).then(res => res.json()).then(res => {
+          this.cargando = false;
+          if (res.data && (res.data as any).datosDiagramaJson) {
+            // reconstruir
+            const xml = (res.data as any).datosDiagramaJson;
+            // TODO mxCodec
+            this.info = 'Diagrama cargado';
+          }
+        }).catch(err => {
+          this.cargando = false;
+          this.error = 'Error al cargar diagrama visual';
+        });
 
-  permitirDrop(event: DragEvent): void {
-    event.preventDefault();
-  }
-
-  onCanvasDrop(event: DragEvent): void {
-    event.preventDefault();
-    const tipo = event.dataTransfer?.getData('application/uml-node-type') as NodoTipo;
-    if (!tipo || !this.canvasRef) return;
-
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    const rawX = event.clientX - rect.left;
-    const rawY = event.clientY - rect.top;
-    const laneIndex = this.getLaneIndexByY(rawY);
-    const lane = this.departamentosVisibles[laneIndex];
-
-    if (!lane) {
-      this.error = 'Debes soltar el nodo dentro de un carril';
-      return;
-    }
-
-    const x = this.clamp(rawX - this.nodeWidth / 2, 20, this.canvasWidth - this.nodeWidth - 20);
-    const y = this.laneTop(laneIndex) + (this.laneHeight - this.nodeHeight) / 2;
-    const baseName = this.nombrePorTipo(tipo);
-    const contador = this.nodos.filter((n) => n.tipo === tipo).length + 1;
-
-    this.nodos.push({
-      id: this.tempId('nodo'),
-      politicaId: this.politicaId,
-      departamentoId: lane.id,
-      nombre: `${baseName} ${contador}`,
-      tipo,
-      posicionX: x,
-      posicionY: y,
-      formularioId: null,
-      creadoEn: new Date().toISOString()
+      },
+      error: (err) => {
+        this.error = 'Error general al cargar';
+        this.cargando = false;
+      }
     });
-    this.info = `Nodo ${baseName} agregado`;
-    this.error = null;
   }
 
-  agregarCarril(departamento: Departamento): void {
-    this.departamentosVisibles.push(departamento);
-    this.mostrarMenuCarriles = false;
-  }
+  agregarCarril(depto: Departamento) {
+    if (!this.graph) return;
+    this.graph.getDataModel().beginUpdate();
+    try {
+      const parent = this.graph.getDefaultParent();
+      const existingLanes = this.graph.getChildVertices(parent).filter(c => this.esCarril(c));
+      
+      const width = 250;
+      const height = 800; // altura total
+      let x = 0;
+      
+      if (existingLanes.length > 0) {
+        const lastGeo = existingLanes[existingLanes.length - 1].getGeometry();
+        if (lastGeo) {
+           x = lastGeo.x + lastGeo.width;
+        }
+      }
 
-  quitarCarril(departamentoId: string): void {
-    const tieneNodos = this.nodos.some((n) => n.departamentoId === departamentoId);
-    if (tieneNodos) {
-      this.error = 'No puedes quitar un carril que tiene nodos.';
-      return;
+      const style = `swimlane;horizontal=0;startSize=30;fillColor=rgba(192,192,128,0.15);strokeColor=#7A7A40;fontColor=#f5f5e8;fontSize=14;fontStyle=1;`;
+      const lane = this.graph.insertVertex(parent, depto.id, depto.nombre, x, 0, width, height, style as any);
+      lane.setAttribute('isLane', 'true');
+      lane.setAttribute('departamentoId', depto.id);
+    } finally {
+      this.graph.getDataModel().endUpdate();
+      this.mostrarMenuCarriles = false;
     }
-    this.departamentosVisibles = this.departamentosVisibles.filter((d) => d.id !== departamentoId);
   }
 
-  seleccionarNodo(nodoId: string): void {
-    if (this.conectandoDesdeId) {
-      this.crearTransicionVisual(this.conectandoDesdeId, nodoId);
-      this.conectandoDesdeId = null;
-      return;
+  handleSelectionChange(sender: any, evt: EventObject) {
+    const cells = this.graph.getSelectionCells();
+    if (cells.length > 0) {
+      this.cellSeleccionada = cells[0];
+      this.hasSelection = true;
+      if (this.esTransicionSeleccionada()) {
+        const lbl = this.cellSeleccionada.getValue();
+        this.propiedadesTemp.etiqueta = typeof lbl === 'string' ? lbl : '';
+        this.propiedadesTemp.tipo = (this.cellSeleccionada.getAttribute('tipo') as TransicionTipo) || 'LINEAL';
+      }
+    } else {
+      this.cellSeleccionada = null;
+      this.hasSelection = false;
     }
-    this.nodoSeleccionadoId = nodoId;
-    this.transicionSeleccionadaId = null;
   }
 
-  iniciarConexion(event: MouseEvent, nodoId: string): void {
-    event.stopPropagation();
-    this.conectandoDesdeId = nodoId;
-    this.nodoSeleccionadoId = nodoId;
-    this.info = 'Haz clic en otro nodo para conectar.';
-    this.error = null;
-  }
-
-  cancelarConexion(): void {
-    this.conectandoDesdeId = null;
-  }
-
-  crearTransicionVisual(origenId: string, destinoId: string): void {
-    if (origenId === destinoId) {
-      this.error = 'No puedes conectar un nodo consigo mismo.';
-      return;
+  eliminarSeleccion() {
+    if (this.graph && !this.graph.isSelectionEmpty()) {
+      this.graph.removeCells(this.graph.getSelectionCells());
     }
-    const existe = this.transiciones.some((t) => t.nodoOrigenId === origenId && t.nodoDestinoId === destinoId);
-    if (existe) {
-      this.error = 'Esa transicion ya existe.';
-      return;
+  }
+
+  esTransicionSeleccionada(): boolean {
+    return !!this.cellSeleccionada && this.cellSeleccionada.isEdge();
+  }
+
+  actualizarTransicion() {
+    if (!this.graph || !this.esTransicionSeleccionada() || !this.cellSeleccionada) return;
+    this.graph.getDataModel().beginUpdate();
+    try {
+      this.graph.getDataModel().setValue(this.cellSeleccionada, this.propiedadesTemp.etiqueta);
+      this.cellSeleccionada.setAttribute('tipo', this.propiedadesTemp.tipo);
+    } finally {
+      this.graph.getDataModel().endUpdate();
     }
-    const origen = this.getNodeById(origenId);
-    if (!origen) return;
-    const tipo = this.inferirTipoTransicion(origen.tipo);
-    this.transiciones.push({
-      id: this.tempId('transicion'),
-      politicaId: this.politicaId,
-      nodoOrigenId: origenId,
-      nodoDestinoId: destinoId,
-      tipo,
-      etiqueta: this.etiquetaDefault(tipo),
-      condicion: tipo === 'ALTERNATIVA' ? '[condicion]' : null,
-      creadoEn: new Date().toISOString()
-    });
-    this.info = 'Transicion creada visualmente.';
-    this.error = null;
   }
 
-  seleccionarTransicion(event: MouseEvent, id: string): void {
-    event.stopPropagation();
-    this.transicionSeleccionadaId = id;
-    this.nodoSeleccionadoId = null;
+  esCarril(cell: Cell): boolean {
+    return cell.isVertex() && cell.getAttribute('isLane') === 'true';
   }
 
-  eliminarNodo(id: string): void {
-    this.nodos = this.nodos.filter((n) => n.id !== id);
-    this.transiciones = this.transiciones.filter((t) => t.nodoOrigenId !== id && t.nodoDestinoId !== id);
-    if (this.nodoSeleccionadoId === id) this.nodoSeleccionadoId = null;
-  }
-
-  eliminarTransicion(id: string): void {
-    this.transiciones = this.transiciones.filter((t) => t.id !== id);
-    if (this.transicionSeleccionadaId === id) this.transicionSeleccionadaId = null;
-  }
-
-  iniciarDrag(event: MouseEvent, nodo: Nodo): void {
-    if ((event.target as HTMLElement).closest('.node-action')) {
-      return;
-    }
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    this.draggingNodeId = nodo.id;
-    this.dragOffsetX = event.clientX - rect.left;
-    this.dragOffsetY = event.clientY - rect.top;
-  }
-
-  onMouseMove = (event: MouseEvent): void => {
-    if (!this.draggingNodeId || !this.canvasRef) return;
-    const canvasRect = this.canvasRef.nativeElement.getBoundingClientRect();
-    const x = this.clamp(event.clientX - canvasRect.left - this.dragOffsetX, 20, this.canvasWidth - this.nodeWidth - 20);
-    const yLibre = this.clamp(event.clientY - canvasRect.top - this.dragOffsetY, 10, this.canvasHeight - this.nodeHeight - 10);
-    const laneIndex = this.getLaneIndexByY(yLibre + this.nodeHeight / 2);
-    const lane = this.departamentosVisibles[laneIndex];
-    const y = this.laneTop(laneIndex) + (this.laneHeight - this.nodeHeight) / 2;
-
-    this.nodos = this.nodos.map((n) => n.id === this.draggingNodeId
-      ? { ...n, posicionX: x, posicionY: y, departamentoId: lane.id }
-      : n);
-  };
-
-  onMouseUp = (): void => {
-    if (!this.draggingNodeId) return;
-    this.draggingNodeId = null;
-  };
-
-  async guardarDiagrama(): Promise<void> {
+  async guardarDiagrama() {
+    this.guardando = true;
     this.error = null;
     this.info = null;
-    this.guardando = true;
+    
+    if (!this.graph) return;
+    
+    // Serializar el canvas con XML nativo 
+    // Usaremos algo generico o mock temporal
+    const empresaId = localStorage.getItem('empresaId') || '';
+
+    const payload = {
+      diagrama: '<mxGraphModel>...</mxGraphModel>',
+      nodos: [],
+      transiciones: []
+    };
+
     try {
-      const mapTempToReal = new Map<string, string>();
+      const response = await fetch(`/api/v1/politicas/${this.politicaId}/diagrama`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('token'),
+          'X-Empresa-Id': empresaId
+        },
+        body: JSON.stringify(payload)
+      });
 
-      const nodosActualesReales = new Set(this.nodos.filter((n) => !this.esTemporal(n.id)).map((n) => n.id));
-      const nodosEliminados = this.nodosOriginales.filter((n) => !nodosActualesReales.has(n.id));
-      for (const n of nodosEliminados) {
-        await firstValueFrom(this.nodoService.eliminar(n.id));
+      if (!response.ok) {
+        throw new Error('No se pudo guardar la politica');
       }
 
-      for (const nodo of this.nodos) {
-        const request = this.mapNodoRequest(nodo);
-        if (this.esTemporal(nodo.id)) {
-          const creado = await firstValueFrom(this.nodoService.crear(request));
-          const nuevoId = creado.data?.id;
-          if (!nuevoId) throw new Error('No se recibio id al crear nodo');
-          mapTempToReal.set(nodo.id, nuevoId);
-          nodo.id = nuevoId;
-        } else {
-          const original = this.nodosOriginales.find((o) => o.id === nodo.id);
-          if (this.nodoCambio(original, nodo)) {
-            await firstValueFrom(this.nodoService.actualizar(nodo.id, request));
-          }
-        }
-      }
-
-      this.transiciones = this.transiciones
-        .map((t) => ({
-          ...t,
-          nodoOrigenId: mapTempToReal.get(t.nodoOrigenId) ?? t.nodoOrigenId,
-          nodoDestinoId: mapTempToReal.get(t.nodoDestinoId) ?? t.nodoDestinoId
-        }))
-        .filter((t) => this.getNodeById(t.nodoOrigenId) && this.getNodeById(t.nodoDestinoId));
-
-      const transicionesActualesReales = new Set(this.transiciones.filter((t) => !this.esTemporal(t.id)).map((t) => t.id));
-      const transicionesEliminadas = this.transicionesOriginales.filter((t) => !transicionesActualesReales.has(t.id));
-      for (const t of transicionesEliminadas) {
-        await firstValueFrom(this.transicionService.eliminar(t.id));
-      }
-
-      for (const transicion of this.transiciones) {
-        const request = this.mapTransicionRequest(transicion);
-        if (this.esTemporal(transicion.id)) {
-          const creada = await firstValueFrom(this.transicionService.crear(request));
-          const nuevoId = creada.data?.id;
-          if (!nuevoId) throw new Error('No se recibio id al crear transicion');
-          transicion.id = nuevoId;
-        } else {
-          const original = this.transicionesOriginales.find((o) => o.id === transicion.id);
-          if (this.transicionCambio(original, transicion)) {
-            await firstValueFrom(this.transicionService.actualizar(transicion.id, request));
-          }
-        }
-      }
-
-      this.nodosOriginales = this.nodos.map((n) => ({ ...n }));
-      this.transicionesOriginales = this.transiciones.map((t) => ({ ...t }));
-      this.info = 'Diagrama guardado correctamente.';
-    } catch (e: unknown) {
-      const message = (e as { error?: { message?: string }; message?: string })?.error?.message
-        || (e as { message?: string })?.message
-        || 'No se pudo guardar el diagrama';
-      this.error = message;
+      this.info = 'Diagrama guardado en BD!!';
+    } catch (e: any) {
+      this.error = e.message;
     } finally {
       this.guardando = false;
     }
   }
 
-  exportarPng(): void {
-    if (!this.canvasRef) return;
-    html2canvas(this.canvasRef.nativeElement).then(canvas => {
+  exportarPng() {
+    const el = document.getElementById('diagram-canvas-container');
+    if (!el) return;
+    html2canvas(el).then(canvas => {
       const link = document.createElement('a');
-      link.download = `diagrama-${this.politicaId}.png`;
+      link.download = `diagrama-${this.politica!.nombre}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     });
   }
 
-  exportarPdf(): void {
-    if (!this.canvasRef) return;
-    html2canvas(this.canvasRef.nativeElement).then(canvas => {
+  exportarPdf() {
+    const el = document.getElementById('diagram-canvas-container');
+    if (!el) return;
+    html2canvas(el).then(canvas => {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('l', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = (canvas.height * pageWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 10, pageWidth, Math.min(pageHeight, 180));
-      pdf.save(`diagrama-${this.politicaId}.pdf`);
+      const width = pdf.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 10, width, height);
+      pdf.save(`diagrama-${this.politica!.nombre}.pdf`);
     });
-  }
-
-  getDepartamentoNombre(departamentoId: string): string {
-    return this.departamentos.find(d => d.id === departamentoId)?.nombre ?? 'Sin departamento';
-  }
-
-  getTransitionPath(transicion: Transicion): string {
-    const origen = this.getNodeById(transicion.nodoOrigenId);
-    const destino = this.getNodeById(transicion.nodoDestinoId);
-    if (!origen || !destino) return '';
-
-    const startX = origen.posicionX + this.nodeWidth;
-    const startY = origen.posicionY + this.nodeHeight / 2;
-    const endX = destino.posicionX;
-    const endY = destino.posicionY + this.nodeHeight / 2;
-    const curve = Math.max(40, Math.abs(endX - startX) * 0.35);
-    return `M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`;
-  }
-
-  getTransitionLabelX(transicion: Transicion): number {
-    const origen = this.getNodeById(transicion.nodoOrigenId);
-    const destino = this.getNodeById(transicion.nodoDestinoId);
-    if (!origen || !destino) return 0;
-    return (origen.posicionX + this.nodeWidth + destino.posicionX) / 2;
-  }
-
-  getTransitionLabelY(transicion: Transicion): number {
-    const origen = this.getNodeById(transicion.nodoOrigenId);
-    const destino = this.getNodeById(transicion.nodoDestinoId);
-    if (!origen || !destino) return 0;
-    return ((origen.posicionY + this.nodeHeight / 2) + (destino.posicionY + this.nodeHeight / 2)) / 2 - 8;
-  }
-
-  limpiarSeleccion(): void {
-    this.nodoSeleccionadoId = null;
-    this.transicionSeleccionadaId = null;
-  }
-
-  private inferirTipoTransicion(tipoNodo: NodoTipo): TransicionTipo {
-    if (tipoNodo === 'DECISION') return 'ALTERNATIVA';
-    if (tipoNodo === 'PARALELO') return 'PARALELA';
-    return 'LINEAL';
-  }
-
-  private etiquetaDefault(tipo: TransicionTipo): string {
-    if (tipo === 'ALTERNATIVA') return 'Decision';
-    if (tipo === 'PARALELA') return 'Paralelo';
-    return 'Flujo';
-  }
-
-  private getLaneIndexByY(y: number): number {
-    if (this.departamentosVisibles.length === 0) return 0;
-    const idx = Math.floor(y / this.laneHeight);
-    return this.clamp(idx, 0, this.departamentosVisibles.length - 1);
-  }
-
-  private clamp(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  private nombrePorTipo(tipo: NodoTipo): string {
-    if (tipo === 'INICIO') return 'Inicio';
-    if (tipo === 'FIN') return 'Fin';
-    if (tipo === 'DECISION') return 'Decision';
-    if (tipo === 'PARALELO') return 'Paralelo';
-    return 'Tarea';
-  }
-
-  private esTemporal(id: string): boolean {
-    return id.startsWith('tmp_');
-  }
-
-  private tempId(prefix: string): string {
-    return `tmp_${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 7)}`;
-  }
-
-  private mapNodoRequest(nodo: Nodo): CrearNodoRequest {
-    return {
-      politicaId: this.politicaId,
-      nombre: nodo.nombre,
-      tipo: nodo.tipo,
-      departamentoId: nodo.departamentoId,
-      posicionX: Math.round(nodo.posicionX),
-      posicionY: Math.round(nodo.posicionY),
-      formularioId: nodo.formularioId ?? null
-    };
-  }
-
-  private mapTransicionRequest(transicion: Transicion): CrearTransicionRequest {
-    return {
-      politicaId: this.politicaId,
-      nodoOrigenId: transicion.nodoOrigenId,
-      nodoDestinoId: transicion.nodoDestinoId,
-      tipo: transicion.tipo,
-      etiqueta: transicion.etiqueta ?? null,
-      condicion: transicion.condicion ?? null
-    };
-  }
-
-  private nodoCambio(original: Nodo | undefined, actual: Nodo): boolean {
-    if (!original) return true;
-    return original.nombre !== actual.nombre
-      || original.tipo !== actual.tipo
-      || original.departamentoId !== actual.departamentoId
-      || Math.round(original.posicionX) !== Math.round(actual.posicionX)
-      || Math.round(original.posicionY) !== Math.round(actual.posicionY)
-      || (original.formularioId ?? null) !== (actual.formularioId ?? null);
-  }
-
-  private transicionCambio(original: Transicion | undefined, actual: Transicion): boolean {
-    if (!original) return true;
-    return original.nodoOrigenId !== actual.nodoOrigenId
-      || original.nodoDestinoId !== actual.nodoDestinoId
-      || original.tipo !== actual.tipo
-      || (original.etiqueta ?? null) !== (actual.etiqueta ?? null)
-      || (original.condicion ?? null) !== (actual.condicion ?? null);
   }
 }

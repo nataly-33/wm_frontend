@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Editor UML 2.5 - Activity Diagram</h1>
-      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - arrastra, conecta y guarda</p>
+      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - Arrastra, conecta y guarda</p>
     </div>
     <div class="toolbar-actions">
       <button class="btn btn-primary" (click)="guardarDiagrama()" [disabled]="guardando || cargando">
@@ -17,20 +17,11 @@
   <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
   <section class="editor-layout">
-    <aside class="stencil panel-light">
+    <!-- PALETA IZQUIERDA -->
+    <aside class="stencil panel-light" #paletteRef>
       <h3>Paleta UML</h3>
-      <div
-        class="stencil-item"
-        *ngFor="let tipo of tiposNodo"
-        draggable="true"
-        (dragstart)="onPaletteDragStart($event, tipo)"
-      >
-        <div class="shape-preview" [ngClass]="getNodeShapeClass(tipo)"></div>
-        <div class="shape-info">
-          <strong>{{ tipo }}</strong>
-          <span>{{ getNodeLabel(tipo) }}</span>
-        </div>
-      </div>
+      <!-- Aqui injectaremos por js/maxgraph los shapes -->
+      <div id="paletteContainer"></div>
 
       <hr />
       <h3>Swimlanes</h3>
@@ -49,86 +40,36 @@
       </div>
     </aside>
 
+    <!-- CANVAS CENTRAL -->
     <section class="panel-light canvas-wrapper">
       <div class="canvas-toolbar">
-        <span>Arrastra formas desde la paleta y sueltalas en un carril.</span>
-        <button *ngIf="conectandoDesdeId" class="btn btn-secondary mini" (click)="cancelarConexion()">
-          Cancelar conexion
+        <span>Arrastra formas desde la paleta y sueltalas en un carril. Selecciona un nodo y arrastra la flecha azul a otro para conectar.</span>
+        <button *ngIf="hasSelection" class="btn btn-danger mini" (click)="eliminarSeleccion()">
+          Eliminar seleccionado
         </button>
       </div>
 
-      <div
-        class="canvas"
-        #canvasRef
-        [style.height.px]="canvasHeight"
-        [style.width.px]="canvasWidth"
-        (dragover)="permitirDrop($event)"
-        (drop)="onCanvasDrop($event)"
-        (click)="limpiarSeleccion()"
-      >
-        <div class="lane" *ngFor="let depto of departamentosVisibles; let i = index" [style.top.px]="laneTop(i)">
-          <div class="lane-header">
-            <span class="lane-label">{{ depto.nombre }}</span>
-            <button class="lane-remove" (click)="quitarCarril(depto.id); $event.stopPropagation()">x</button>
-          </div>
-        </div>
-
-        <svg class="links-layer" [attr.width]="canvasWidth" [attr.height]="canvasHeight">
-          <defs>
-            <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#7b7b5c"></polygon>
-            </marker>
-          </defs>
-
-          <g *ngFor="let t of transiciones">
-            <path
-              [attr.d]="getTransitionPath(t)"
-              [class.link-selected]="transicionSeleccionadaId === t.id"
-              class="link-path"
-              marker-end="url(#arrowHead)"
-              (click)="seleccionarTransicion($event, t.id)"
-            ></path>
-            <text [attr.x]="getTransitionLabelX(t)" [attr.y]="getTransitionLabelY(t)" class="link-label">
-              {{ t.tipo }}
-            </text>
-          </g>
-        </svg>
-
-        <article
-          class="node-card"
-          *ngFor="let nodo of nodos"
-          [style.left.px]="nodo.posicionX"
-          [style.top.px]="nodo.posicionY"
-          [class.node-selected]="nodoSeleccionadoId === nodo.id"
-          (mousedown)="iniciarDrag($event, nodo)"
-          (click)="seleccionarNodo(nodo.id); $event.stopPropagation()"
-        >
-          <div class="node-shape" [ngClass]="getNodeShapeClass(nodo.tipo)"></div>
-          <div class="node-text">
-            <strong>{{ nodo.nombre }}</strong>
-            <small>{{ nodo.tipo }} - {{ getDepartamentoNombre(nodo.departamentoId) }}</small>
-          </div>
-          <button class="node-action connect" title="Conectar" (click)="iniciarConexion($event, nodo.id)">-></button>
-          <button class="node-action delete" title="Eliminar" (click)="eliminarNodo(nodo.id); $event.stopPropagation()">x</button>
-        </article>
-      </div>
-
-      <div class="selection-toolbar" *ngIf="transicionSeleccionadaId || nodoSeleccionadoId">
-        <button
-          *ngIf="transicionSeleccionadaId"
-          class="btn btn-danger mini"
-          (click)="eliminarTransicion(transicionSeleccionadaId!)"
-        >
-          Eliminar transicion seleccionada
-        </button>
-        <button
-          *ngIf="nodoSeleccionadoId"
-          class="btn btn-danger mini"
-          (click)="eliminarNodo(nodoSeleccionadoId!)"
-        >
-          Eliminar nodo seleccionado
-        </button>
+      <div class="canvas-container" id="diagram-canvas-container">
+        <!-- MaxGraph insertara el canvas aqui -->
+        <div id="graphContainer" #graphContainer></div>
       </div>
     </section>
+
+    <!-- PROPIEDADES DERECHA -->
+    <aside class="properties-panel panel-light" *ngIf="cellSeleccionada && esTransicionSeleccionada()">
+      <h3>Propiedades (Transición)</h3>
+      <div class="form-group">
+        <label>Etiqueta</label>
+        <input type="text" class="input-base" [(ngModel)]="propiedadesTemp.etiqueta" (input)="actualizarTransicion()" />
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select class="input-base" [(ngModel)]="propiedadesTemp.tipo" (change)="actualizarTransicion()">
+          <option value="LINEAL">Lineal</option>
+          <option value="ALTERNATIVA">Alternativa</option>
+          <option value="PARALELA">Paralela</option>
+        </select>
+      </div>
+    </aside>
   </section>
 </div>
