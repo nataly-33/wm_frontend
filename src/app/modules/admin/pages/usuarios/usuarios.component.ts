@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize, timeout } from 'rxjs';
+import { filter, finalize, take, timeout } from 'rxjs';
 import { UsuarioService, Usuario, CrearUsuarioRequest } from '../../../../core/services/usuario.service';
 import { DepartamentoService, Departamento } from '../../../../core/services/departamento.service';
 import { ApiResponse } from '../../../../core/models/api-response.model';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -16,6 +17,7 @@ import { ApiResponse } from '../../../../core/models/api-response.model';
 export class UsuariosComponent implements OnInit {
   usuarios: Usuario[] = [];
   departamentos: Departamento[] = [];
+  departamentosDisponibles: Departamento[] = [];
   form!: FormGroup;
   mostrarModal = false;
   editandoId: string | null = null;
@@ -32,13 +34,19 @@ export class UsuariosComponent implements OnInit {
   constructor(
     private usuarioService: UsuarioService,
     private deptoService: DepartamentoService,
+    private authService: AuthService,
     private fb: FormBuilder
   ) {}
 
   ngOnInit(): void {
     this.inicializarForm();
-    this.cargarUsuarios();
-    this.cargarDepartamentos();
+    this.authService.getCurrentUser$().pipe(
+      filter((user): user is NonNullable<typeof user> => !!user && !!user.empresaId),
+      take(1)
+    ).subscribe(() => {
+      this.cargarUsuarios();
+      this.cargarDepartamentos();
+    });
   }
 
   inicializarForm(): void {
@@ -92,10 +100,14 @@ export class UsuariosComponent implements OnInit {
       // Al editar, no requerimos password
       this.form.get('password')?.clearValidators();
       this.form.get('password')?.updateValueAndValidity();
+      
+      // Load relevant available departments for editing
+      this.onRolChange();
     } else {
       this.editandoId = null;
       this.esNuevo = true;
       this.form.reset();
+      this.departamentosDisponibles = [];
       this.form.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
       this.form.get('password')?.updateValueAndValidity();
     }
@@ -184,7 +196,25 @@ export class UsuariosComponent implements OnInit {
     
     if (rol === 'ADMIN_DEPARTAMENTO' || rol === 'FUNCIONARIO') {
       deptoControl?.setValidators([Validators.required]);
+      
+      if (rol === 'ADMIN_DEPARTAMENTO') {
+        this.deptoService.listarSinAdmin().subscribe({
+          next: (res) => {
+            this.departamentosDisponibles = res.data ?? [];
+            // Si estais editando y ya teneis uno, aseguraos de que vuestro propio depto esté en la lista 
+            // ya que si lo cargamos sin-admin, a nosotros mismos se nos excluirá porque el admin actual somos nosotros
+            if (this.editandoId && deptoControl?.value && !this.departamentosDisponibles.find(d => d.id === deptoControl.value)) {
+               const myDepto = this.departamentos.find(d => d.id === deptoControl.value);
+               if (myDepto) this.departamentosDisponibles.push(myDepto);
+            }
+          }
+        });
+      } else {
+        // FUNCIONARIO
+        this.departamentosDisponibles = [...this.departamentos];
+      }
     } else {
+      this.departamentosDisponibles = [];
       deptoControl?.clearValidators();
       deptoControl?.setValue(null);
     }

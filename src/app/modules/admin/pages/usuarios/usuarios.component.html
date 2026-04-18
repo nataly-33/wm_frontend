@@ -195,9 +195,9 @@
           [class.is-invalid]="form.get('departamentoId')?.invalid && form.get('departamentoId')?.touched"
         >
           <option value="">-- Selecciona un departamento --</option>
-          <option *ngFor="let depto of departamentos" [value]="depto.id">{{ depto.nombre }}</option>
+          <option *ngFor="let depto of departamentosDisponibles" [value]="depto.id">{{ depto.nombre }}</option>
         </select>
-        <span class="form-helper" *ngIf="departamentos.length === 0">No hay departamentos. Crea uno primero.</span>
+        <span class="form-helper" *ngIf="departamentosDisponibles.length === 0">No hay departamentos disponibles o todos tienen administrador asociado.</span>
         <span class="form-error" *ngIf="form.get('departamentoId')?.invalid && form.get('departamentoId')?.touched">
           Departamento requerido para el rol seleccionado
         </span>
