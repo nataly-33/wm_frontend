@@ -31,6 +31,14 @@ export class DepartamentoService {
     return this.http.get<ApiResponse<Departamento[]>>(this.baseUrl);
   }
 
+  listarSinAdmin(): Observable<ApiResponse<Departamento[]>> {
+    return this.http.get<ApiResponse<Departamento[]>>(`${this.baseUrl}/sin-admin`);
+  }
+
+  listarCompletos(): Observable<ApiResponse<Departamento[]>> {
+    return this.http.get<ApiResponse<Departamento[]>>(`${this.baseUrl}/completos`);
+  }
+
   obtener(id: string): Observable<ApiResponse<Departamento>> {
     return this.http.get<ApiResponse<Departamento>>(`${this.baseUrl}/${id}`);
   }

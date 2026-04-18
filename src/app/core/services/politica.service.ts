@@ -14,11 +14,45 @@ export interface Politica {
   creadoPor: string;
   creadoEn: string;
   actualizadoEn: string;
+  datosDiagramaJson?: string | null;
 }
 
 export interface CrearPoliticaRequest {
   nombre: string;
   descripcion: string;
+}
+
+export interface DiagramaNodoPayload {
+  id?: string | null;
+  tempId: string;
+  tipo: string;
+  nombre: string;
+  departamentoId: string;
+  formularioId?: string | null;
+  posicionX: number;
+  posicionY: number;
+}
+
+export interface DiagramaTransicionPayload {
+  id?: string | null;
+  nodoOrigenTempId: string;
+  nodoDestinoTempId: string;
+  tipo: string;
+  etiqueta?: string | null;
+  condicion?: string | null;
+}
+
+export interface GuardarDiagramaRequest {
+  datosDiagramaJson: string;
+  nodos: DiagramaNodoPayload[];
+  transiciones: DiagramaTransicionPayload[];
+}
+
+export interface DiagramaResponse {
+  datosDiagramaJson: string | null;
+  nodos: any[];
+  transiciones: any[];
+  departamentos: any[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -53,5 +87,13 @@ export class PoliticaService {
 
   desactivar(id: string): Observable<ApiResponse<Politica>> {
     return this.http.put<ApiResponse<Politica>>(`${this.baseUrl}/${id}/desactivar`, {});
+  }
+
+  obtenerDiagrama(id: string): Observable<ApiResponse<DiagramaResponse>> {
+    return this.http.get<ApiResponse<DiagramaResponse>>(`${this.baseUrl}/${id}/diagrama`);
+  }
+
+  guardarDiagrama(id: string, request: GuardarDiagramaRequest): Observable<ApiResponse<Politica>> {
+    return this.http.put<ApiResponse<Politica>>(`${this.baseUrl}/${id}/diagrama`, request);
   }
 }
