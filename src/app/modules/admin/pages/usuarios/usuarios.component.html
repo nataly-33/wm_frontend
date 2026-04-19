@@ -36,7 +36,7 @@
       <div class="card-top">
         <div class="user-avatar">{{ getIniciales(usuario.nombre) }}</div>
         <span class="role-chip" [ngClass]="getRolClass(usuario.rol)">
-          {{ usuario.rol === 'ADMIN_DEPARTAMENTO' ? 'Admin Depto' : 'Funcionario' }}
+          {{ usuario.rol === 'ADMIN_GENERAL' ? 'Admin general' : (usuario.rol === 'ADMIN_DEPARTAMENTO' ? 'Admin Depto' : 'Funcionario') }}
         </span>
       </div>
 

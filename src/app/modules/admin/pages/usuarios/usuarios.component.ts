@@ -180,6 +180,9 @@ export class UsuariosComponent implements OnInit {
   }
 
   getNombreRol(rol: string): string {
+    if (rol === 'ADMIN_GENERAL') {
+      return 'Administrador general';
+    }
     const rolObj = this.rolesDisponibles.find(r => r.id === rol);
     return rolObj ? rolObj.nombre : rol;
   }
@@ -229,6 +232,7 @@ export class UsuariosComponent implements OnInit {
   }
 
   getRolClass(rol: string): string {
+    if (rol === 'ADMIN_GENERAL') return 'role-super';
     if (rol === 'ADMIN_DEPARTAMENTO') return 'role-admin';
     if (rol === 'FUNCIONARIO') return 'role-func';
     return '';

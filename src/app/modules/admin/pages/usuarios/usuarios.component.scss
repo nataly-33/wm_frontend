@@ -64,6 +64,11 @@
     color: var(--success);
     border: 1px solid rgba(107, 217, 104, 0.25);
   }
+  &.role-super {
+    background: rgba(192, 192, 128, 0.15);
+    color: var(--primary-300);
+    border: 1px solid rgba(192, 192, 128, 0.35);
+  }
 }
 
 .card-body {
