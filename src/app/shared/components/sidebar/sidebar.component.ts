@@ -1,10 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { SafeHtml } from '@angular/platform-browser';
 
 export interface SidebarItem {
   label: string;
-  icon: string; // SVG path string
+  icon: string | SafeHtml; // SVG string (sanitizado) o texto simple
   route: string;
   submenu?: SidebarItem[];
 }
@@ -52,7 +53,8 @@ export interface SidebarItem {
   `,
   styles: [`
     .sidebar {
-      width: 260px;
+      width: 200px;
+      max-width: 200px;
       background: var(--bg-panel);
       border-right: 1px solid var(--border);
       height: 100vh;
@@ -65,8 +67,8 @@ export interface SidebarItem {
     .sidebar-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 24px 20px 20px;
+      gap: 8px;
+      padding: 20px 14px 16px;
       border-bottom: 1px solid var(--border);
     }
 
@@ -84,7 +86,7 @@ export interface SidebarItem {
     }
 
     .brand-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--primary-100);
       letter-spacing: 0.3px;
