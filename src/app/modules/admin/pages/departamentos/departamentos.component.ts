@@ -155,8 +155,19 @@ export class DepartamentosComponent implements OnInit {
     }
   }
 
-  getNombreAdmin(adminId: string): string {
-    const admin = this.usuarios.find(u => u.id === adminId);
+  getNombreAdmin(adminId: string | null | undefined): string {
+    if (!adminId) {
+      return '';
+    }
+    const admin = this.todosLosUsuarios.find((u) => u.id === adminId);
     return admin ? admin.nombre : 'No asignado';
+  }
+
+  contarFuncionarios(deptoId: string): number {
+    return this.todosLosUsuarios.filter((u) => u.departamentoId === deptoId && u.rol === 'FUNCIONARIO').length;
+  }
+
+  sinAdmin(depto: Departamento): boolean {
+    return !depto.adminDepartamentoId || depto.adminDepartamentoId.trim() === '';
   }
 }
