@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Client, Message } from '@stomp/stompjs';
-import * as SockJS from 'sockjs-client';
+import SockJS from 'sockjs-client';
 import { Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
@@ -22,7 +22,7 @@ export class SocketService {
     if (!token) return;
 
     this.client = new Client({
-      webSocketFactory: () => new (SockJS as any)(`${environment.apiUrl}/ws`),
+      webSocketFactory: () => new SockJS(`${environment.apiUrl}/ws`),
       debug: (str) => {
         // console.log(str);
       },
