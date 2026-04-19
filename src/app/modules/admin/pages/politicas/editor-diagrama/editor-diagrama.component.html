@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Editor UML 2.5 - Activity Diagram</h1>
-      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - Arrastra, conecta y guarda</p>
+      <p class="page-subtitle">{{ politica?.nombre || 'Politica' }} - JointJS</p>
     </div>
     <div class="toolbar-actions">
       <button class="btn btn-primary" (click)="guardarDiagrama()" [disabled]="guardando || cargando">
@@ -17,58 +17,100 @@
   <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
   <section class="editor-layout">
-    <!-- PALETA IZQUIERDA -->
-    <aside class="stencil panel-light" #paletteRef>
+    <aside class="stencil panel-light">
       <h3>Paleta UML</h3>
-      <!-- Aqui injectaremos por js/maxgraph los shapes -->
-      <div id="paletteContainer"></div>
 
-      <hr />
+      <div class="palette-list">
+        <button
+          class="palette-item"
+          *ngFor="let item of paletteItems"
+          draggable="true"
+          [title]="item.label"
+          (dragstart)="onPaletteDragStart($event, item.tipo)"
+          type="button"
+        >
+          <span class="shape-preview" [ngClass]="item.preview"></span>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
       <h3>Swimlanes</h3>
-      <button class="btn btn-secondary lane-button" (click)="mostrarMenuCarriles = !mostrarMenuCarriles">
-        + Agregar carril
+      <button class="btn btn-secondary lane-button" (click)="mostrarMenuCarriles = !mostrarMenuCarriles" type="button">
+        + Carril
       </button>
+
+      <div class="lane-list" *ngIf="carrilesActuales.length > 0">
+        <div class="lane-chip" *ngFor="let lane of carrilesActuales">
+          <span class="lane-name">{{ lane.nombreDepartamento }}</span>
+          <button class="lane-remove" (click)="eliminarCarril(lane.departamentoId)" type="button">x</button>
+        </div>
+      </div>
+
       <div *ngIf="mostrarMenuCarriles" class="lane-menu">
         <button
           class="lane-option"
           *ngFor="let depto of departamentosDisponiblesParaCarril"
           (click)="agregarCarril(depto)"
+          type="button"
         >
           {{ depto.nombre }}
         </button>
-        <p *ngIf="departamentosDisponiblesParaCarril.length === 0">No hay mas departamentos disponibles.</p>
+        <p *ngIf="departamentosDisponiblesParaCarril.length === 0">No hay mas departamentos.</p>
       </div>
     </aside>
 
-    <!-- CANVAS CENTRAL -->
     <section class="panel-light canvas-wrapper">
       <div class="canvas-toolbar">
-        <span>Arrastra formas desde la paleta y sueltalas en un carril. Selecciona un nodo y arrastra la flecha azul a otro para conectar.</span>
-        <button *ngIf="hasSelection" class="btn btn-danger mini" (click)="eliminarSeleccion()">
-          Eliminar seleccionado
+        <span>Arrastra figuras al lienzo, suelta dentro de un carril y conecta desde los puertos laterales.</span>
+        <button *ngIf="hasSelection" class="btn btn-danger mini" (click)="eliminarSeleccion()" type="button">
+          Eliminar
         </button>
       </div>
 
-      <div class="canvas-container" id="diagram-canvas-container">
-        <!-- MaxGraph insertara el canvas aqui -->
-        <div id="graphContainer" #graphContainer></div>
+      <div
+        class="canvas-container"
+        id="diagram-canvas-container"
+        (dragover)="onCanvasDragOver($event)"
+        (drop)="onCanvasDrop($event)"
+      >
+        <div id="diagram-canvas" #diagramCanvas></div>
       </div>
     </section>
 
-    <!-- PROPIEDADES DERECHA -->
-    <aside class="properties-panel panel-light" *ngIf="cellSeleccionada && esTransicionSeleccionada()">
-      <h3>Propiedades (Transición)</h3>
-      <div class="form-group">
-        <label>Etiqueta</label>
-        <input type="text" class="input-base" [(ngModel)]="propiedadesTemp.etiqueta" (input)="actualizarTransicion()" />
+    <aside class="properties-panel panel-light" *ngIf="esTransicionSeleccionada() || esNodoSeleccionado()">
+      <h3 *ngIf="esTransicionSeleccionada()">Transicion</h3>
+      <h3 *ngIf="esNodoSeleccionado()">Nodo</h3>
+
+      <div *ngIf="esTransicionSeleccionada()">
+        <div class="form-group">
+          <label>Etiqueta</label>
+          <input type="text" class="input-base" [(ngModel)]="propiedadesTemp.etiqueta" (input)="actualizarTransicion()" />
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select class="input-base" [(ngModel)]="propiedadesTemp.tipo" (change)="actualizarTransicion()">
+            <option value="LINEAL">Lineal</option>
+            <option value="ALTERNATIVA">Alternativa</option>
+            <option value="PARALELA">Paralela</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Condicion tecnica</label>
+          <textarea class="input-base" rows="4" [(ngModel)]="propiedadesTemp.condicion" (input)="actualizarTransicion()"></textarea>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Tipo</label>
-        <select class="input-base" [(ngModel)]="propiedadesTemp.tipo" (change)="actualizarTransicion()">
-          <option value="LINEAL">Lineal</option>
-          <option value="ALTERNATIVA">Alternativa</option>
-          <option value="PARALELA">Paralela</option>
-        </select>
+
+      <div *ngIf="esNodoSeleccionado()">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.nombre" (input)="actualizarNodoSeleccionado()" />
+        </div>
+        <div class="form-group">
+          <label>Formulario (opcional)</label>
+          <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.formularioId" (input)="actualizarNodoSeleccionado()" />
+        </div>
+        <p class="properties-help">Doble click en una tarea o decision para editar rapidamente.</p>
       </div>
     </aside>
   </section>
