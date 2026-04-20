@@ -62,10 +62,15 @@
 
     <section class="panel-light canvas-wrapper">
       <div class="canvas-toolbar">
-        <span>Arrastra figuras al lienzo, suelta dentro de un carril y conecta desde los puertos laterales.</span>
-        <button *ngIf="hasSelection" class="btn btn-danger mini" (click)="eliminarSeleccion()" type="button">
-          Eliminar
-        </button>
+        <span>Arrastra figuras al lienzo y conéctalas desde los puntos del nodo.</span>
+        <div class="canvas-toolbar-actions">
+          <button *ngIf="esNodoSeleccionado()" class="btn btn-secondary mini" (click)="abrirModalNodoSeleccionado()" type="button">
+            Editar nodo
+          </button>
+          <button *ngIf="hasSelection" class="btn btn-danger mini" (click)="eliminarSeleccion()" type="button">
+            Eliminar
+          </button>
+        </div>
       </div>
 
       <div
@@ -76,42 +81,59 @@
       >
         <div id="diagram-canvas" #diagramCanvas></div>
       </div>
+
+      <div class="bottom-properties" *ngIf="esTransicionSeleccionada() || esNodoSeleccionado()">
+        <div class="bottom-block" *ngIf="esNodoSeleccionado()">
+          <h3>Nodo</h3>
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.nombre" (input)="actualizarNodoSeleccionado()" />
+          </div>
+          <div class="form-group">
+            <label>Formulario asignado</label>
+            <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.formularioId" (input)="actualizarNodoSeleccionado()" />
+          </div>
+          <p class="properties-help">Doble click para abrir edicion detallada en modal.</p>
+        </div>
+
+        <div class="bottom-block" *ngIf="esTransicionSeleccionada()">
+          <h3>Transicion</h3>
+          <div class="form-group" *ngIf="esEtiquetaVisibleEnTransicion()">
+            <label>Etiqueta (Decision)</label>
+            <input type="text" class="input-base" [(ngModel)]="propiedadesTemp.etiqueta" (input)="actualizarTransicion()" />
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select class="input-base" [(ngModel)]="propiedadesTemp.tipo" (change)="actualizarTransicion()">
+              <option value="LINEAL">Lineal</option>
+              <option value="ALTERNATIVA">Alternativa</option>
+              <option value="PARALELA">Paralela</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Condicion tecnica</label>
+            <textarea class="input-base" rows="2" [(ngModel)]="propiedadesTemp.condicion" (input)="actualizarTransicion()"></textarea>
+          </div>
+        </div>
+      </div>
     </section>
-
-    <aside class="properties-panel panel-light" *ngIf="esTransicionSeleccionada() || esNodoSeleccionado()">
-      <h3 *ngIf="esTransicionSeleccionada()">Transicion</h3>
-      <h3 *ngIf="esNodoSeleccionado()">Nodo</h3>
-
-      <div *ngIf="esTransicionSeleccionada()">
-        <div class="form-group">
-          <label>Etiqueta</label>
-          <input type="text" class="input-base" [(ngModel)]="propiedadesTemp.etiqueta" (input)="actualizarTransicion()" />
-        </div>
-        <div class="form-group">
-          <label>Tipo</label>
-          <select class="input-base" [(ngModel)]="propiedadesTemp.tipo" (change)="actualizarTransicion()">
-            <option value="LINEAL">Lineal</option>
-            <option value="ALTERNATIVA">Alternativa</option>
-            <option value="PARALELA">Paralela</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Condicion tecnica</label>
-          <textarea class="input-base" rows="4" [(ngModel)]="propiedadesTemp.condicion" (input)="actualizarTransicion()"></textarea>
-        </div>
-      </div>
-
-      <div *ngIf="esNodoSeleccionado()">
-        <div class="form-group">
-          <label>Nombre</label>
-          <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.nombre" (input)="actualizarNodoSeleccionado()" />
-        </div>
-        <div class="form-group">
-          <label>Formulario (opcional)</label>
-          <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.formularioId" (input)="actualizarNodoSeleccionado()" />
-        </div>
-        <p class="properties-help">Doble click en una tarea o decision para editar rapidamente.</p>
-      </div>
-    </aside>
   </section>
+
+  <div class="node-modal-backdrop" *ngIf="mostrarModalNodo">
+    <div class="node-modal panel-light">
+      <h3>Editar nodo</h3>
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" class="input-base" [(ngModel)]="nodoModal.nombre" />
+      </div>
+      <div class="form-group">
+        <label>Formulario asignado</label>
+        <input type="text" class="input-base" [(ngModel)]="nodoModal.formularioId" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="cancelarModalNodo()">Cancelar</button>
+        <button class="btn btn-primary" type="button" (click)="guardarModalNodo()">Guardar</button>
+      </div>
+    </div>
+  </div>
 </div>

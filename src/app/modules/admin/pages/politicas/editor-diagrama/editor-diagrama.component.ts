@@ -28,7 +28,8 @@ interface LaneState {
 }
 
 interface NodePayload {
-  id: string;
+  id?: string;
+  tempId?: string;
   tipo: NodoEstado['tipo'];
   nombre: string;
   departamentoId: string;
@@ -46,6 +47,7 @@ interface NodePayload {
 })
 export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly laneWidth = 220;
+  private readonly portIdleOpacity = 0.18;
 
   @ViewChild('diagramCanvas', { static: true }) diagramCanvasRef!: ElementRef<HTMLDivElement>;
 
@@ -75,6 +77,13 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   };
 
   propiedadesNodoTemp = {
+    nombre: '',
+    formularioId: ''
+  };
+
+  mostrarModalNodo = false;
+  private nodoModalTarget: joint.dia.Element | null = null;
+  nodoModal = {
     nombre: '',
     formularioId: ''
   };
@@ -167,7 +176,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     const y = Math.max(80, point.y - size.h / 2);
 
     this.createNode({
-      id: `tmp_node_${Date.now()}_${++this.tempCounter}`,
+      tempId: `tmp_node_${Date.now()}_${++this.tempCounter}`,
       tipo,
       nombre: this.defaultLabelForTipo(tipo),
       departamentoId: lane.departamentoId,
@@ -268,6 +277,45 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedLink.set('transicionTipo', this.propiedadesTemp.tipo);
     this.selectedLink.set('condicion', this.propiedadesTemp.condicion || '');
     this.setLinkLabel(this.selectedLink, this.formatLinkLabel(this.propiedadesTemp.etiqueta, this.propiedadesTemp.tipo));
+  }
+
+  esEtiquetaVisibleEnTransicion(): boolean {
+    return this.esTransicionDeDecision(this.selectedLink);
+  }
+
+  abrirModalNodoSeleccionado(): void {
+    if (!this.selectedElement || this.selectedElement.get('kind') !== 'NODE') {
+      return;
+    }
+    this.abrirModalEdicionNodo(this.selectedElement);
+  }
+
+  cancelarModalNodo(): void {
+    this.mostrarModalNodo = false;
+    this.nodoModalTarget = null;
+  }
+
+  guardarModalNodo(): void {
+    if (!this.nodoModalTarget) {
+      this.cancelarModalNodo();
+      return;
+    }
+
+    const tipo = (this.nodoModalTarget.get('nodeTipo') as NodoEstado['tipo']) || 'TAREA';
+    const limpio = this.nodoModal.nombre.trim();
+    const nombre = limpio || this.defaultLabelForTipo(tipo);
+
+    this.nodoModalTarget.set('nodeNombre', nombre);
+    if (tipo !== 'INICIO' && tipo !== 'FIN' && tipo !== 'PARALELO') {
+      this.nodoModalTarget.attr('label/text', nombre);
+    }
+    this.nodoModalTarget.set('formularioId', this.nodoModal.formularioId.trim() || undefined);
+
+    this.selectedElement = this.nodoModalTarget;
+    this.selectedLink = null;
+    this.hasSelection = true;
+    this.syncNodePropsFromSelection();
+    this.cancelarModalNodo();
   }
 
   async guardarDiagrama(): Promise<void> {
@@ -388,6 +436,16 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
             linkMove: false
           };
         }
+        if (cellView.model.isLink()) {
+          return {
+            linkMove: true,
+            arrowheadMove: true,
+            vertexMove: true,
+            vertexAdd: true,
+            vertexRemove: true,
+            useLinkTools: true
+          };
+        }
         return true;
       },
       linkPinning: false,
@@ -430,7 +488,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     this.paper.on('element:pointerdblclick', (view: joint.dia.ElementView) => {
-      this.editarNombreNodoPrompt(view.model);
+      this.abrirModalEdicionNodo(view.model);
     });
 
     this.paper.on('link:pointerclick', (view: joint.dia.LinkView) => {
@@ -464,6 +522,19 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       if (!link.get('transicionTipo')) {
         link.set('transicionTipo', 'LINEAL');
       }
+      this.aplicarReglasDeTransicion(link);
+    });
+
+    this.graph.on('change:source', (cell: joint.dia.Cell) => {
+      if (cell.isLink()) {
+        this.aplicarReglasDeTransicion(cell as joint.dia.Link);
+      }
+    });
+
+    this.graph.on('change:target', (cell: joint.dia.Cell) => {
+      if (cell.isLink()) {
+        this.aplicarReglasDeTransicion(cell as joint.dia.Link);
+      }
     });
 
     this.ensurePaperDimensions();
@@ -475,14 +546,15 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
         line: {
           stroke: '#7A7A40',
           strokeWidth: 2.2,
+          strokeDasharray: '0',
           targetMarker: {
             type: 'path',
             d: 'M 10 -5 0 0 10 5 z'
           }
         }
       },
-      connector: { name: 'normal' },
-      router: { name: 'manhattan', args: { padding: 16 } },
+      connector: { name: 'rounded', args: { radius: 10 } },
+      router: { name: 'normal' },
       labels: []
     });
     link.set('kind', 'TRANSICION');
@@ -534,7 +606,12 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
             text: payload.nombre,
             fill: '#111827',
             fontSize: 10,
-            fontWeight: 600
+            fontWeight: 600,
+            textWrap: {
+              width: -18,
+              height: -18,
+              ellipsis: true
+            }
           }
         }
       });
@@ -563,7 +640,12 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
             text: payload.nombre,
             fill: '#111827',
             fontSize: 10,
-            fontWeight: 500
+            fontWeight: 500,
+            textWrap: {
+              width: -20,
+              height: -14,
+              ellipsis: true
+            }
           }
         }
       });
@@ -571,7 +653,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
     element.set('kind', 'NODE');
     element.set('nodoDbId', payload.id || undefined);
-    element.set('tempId', payload.id || `tmp_node_${Date.now()}_${++this.tempCounter}`);
+    element.set('tempId', payload.tempId || payload.id || `tmp_node_${Date.now()}_${++this.tempCounter}`);
     element.set('nodeTipo', payload.tipo);
     element.set('nodeNombre', payload.nombre || this.defaultLabelForTipo(payload.tipo));
     element.set('departamentoId', payload.departamentoId || '');
@@ -579,7 +661,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       element.set('formularioId', payload.formularioId);
     }
 
-    this.configureNodePorts(element, payload.tipo !== 'PARALELO');
+    this.configureNodePorts(element, true);
     this.graph.addCell(element);
     return element;
   }
@@ -589,35 +671,68 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
+    const circleAttrs = {
+      r: 6,
+      magnet: true,
+      stroke: '#6B6F2A',
+      strokeWidth: 1.2,
+      fill: '#FFFFFF',
+      opacity: this.portIdleOpacity
+    };
+
     element.prop('ports/groups', {
       top: {
-        position: 'top',
+        position: { name: 'top', args: { x: '50%' } },
         attrs: {
-          circle: { r: 5, magnet: true, stroke: '#1F2937', strokeWidth: 1.2, fill: '#FFFFFF', opacity: 0 }
+          circle: circleAttrs
         }
       },
       right: {
-        position: 'right',
+        position: { name: 'right', args: { y: '50%' } },
         attrs: {
-          circle: { r: 5, magnet: true, stroke: '#1F2937', strokeWidth: 1.2, fill: '#FFFFFF', opacity: 0 }
+          circle: circleAttrs
         }
       },
       bottom: {
-        position: 'bottom',
+        position: { name: 'bottom', args: { x: '50%' } },
         attrs: {
-          circle: { r: 5, magnet: true, stroke: '#1F2937', strokeWidth: 1.2, fill: '#FFFFFF', opacity: 0 }
+          circle: circleAttrs
         }
       },
       left: {
-        position: 'left',
+        position: { name: 'left', args: { y: '50%' } },
         attrs: {
-          circle: { r: 5, magnet: true, stroke: '#1F2937', strokeWidth: 1.2, fill: '#FFFFFF', opacity: 0 }
+          circle: circleAttrs
+        }
+      },
+      topLeft: {
+        position: { name: 'absolute', args: { x: '6%', y: '6%' } },
+        attrs: {
+          circle: circleAttrs
+        }
+      },
+      topRight: {
+        position: { name: 'absolute', args: { x: '94%', y: '6%' } },
+        attrs: {
+          circle: circleAttrs
+        }
+      },
+      bottomLeft: {
+        position: { name: 'absolute', args: { x: '6%', y: '94%' } },
+        attrs: {
+          circle: circleAttrs
+        }
+      },
+      bottomRight: {
+        position: { name: 'absolute', args: { x: '94%', y: '94%' } },
+        attrs: {
+          circle: circleAttrs
         }
       }
     });
 
     const existing = new Set((element.getPorts() || []).map((p) => p.id));
-    const required = ['top', 'right', 'bottom', 'left'];
+    const required = ['top', 'right', 'bottom', 'left', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
     const newPorts = required.filter((id) => !existing.has(id)).map((id) => ({ id, group: id }));
     if (newPorts.length > 0) {
       element.addPorts(newPorts);
@@ -738,7 +853,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       el.set('nodeTipo', tipo);
       const nombreActual = (el.get('nodeNombre') as string) || (el.attr('label/text') as string) || this.defaultLabelForTipo(tipo);
       el.set('nodeNombre', nombreActual);
-      this.configureNodePorts(el, tipo !== 'PARALELO');
+      this.configureNodePorts(el, true);
 
       const depId = (el.get('departamentoId') as string) || '';
       const lane = depId ? laneByDept.get(depId) : null;
@@ -757,10 +872,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       if (!link.get('tempId')) {
         link.set('tempId', `tmp_tr_${Date.now()}_${++this.tempCounter}`);
       }
-      link.connector({ name: 'normal' });
-      link.router('manhattan', { padding: 16 });
+      link.connector({ name: 'rounded', args: { radius: 10 } });
+      link.router('normal');
       link.attr(['line', 'stroke'], '#7A7A40');
       link.attr(['line', 'strokeWidth'], 2.2);
+      this.aplicarReglasDeTransicion(link);
     });
   }
 
@@ -775,7 +891,6 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     deptOrder.forEach((d) => this.insertLane(d.id, d.nombre));
 
     const topoIndex = this.computeTopologicalOrder(nodos, transiciones);
-    const laneCounters = new Map<string, number>();
     const nodeByDbId = new Map<string, joint.dia.Element>();
 
     const sortedNodes = [...nodos].sort((a, b) => {
@@ -795,15 +910,17 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
         continue;
       }
 
-      const seq = laneCounters.get(lane.departamentoId) ?? 0;
-      laneCounters.set(lane.departamentoId, seq + 1);
-
       const size = this.getNodeSize(tipo);
-      const x = lane.x + (lane.width - size.w) / 2;
-      const y = Math.max(80, 110 + seq * 150);
+      const xBase = Number(n.posicionX ?? Number.NaN);
+      const xCenter = Number.isFinite(xBase) ? xBase : lane.x + (lane.width - size.w) / 2;
+      const x = Math.max(lane.x + 16, Math.min(xCenter, lane.x + lane.width - size.w - 16));
+      const yBase = Number(n.posicionY ?? Number.NaN);
+      const yByOrder = 110 + (topoIndex.get(n.id) ?? 0) * 130;
+      const y = Math.max(80, Number.isFinite(yBase) ? yBase : yByOrder);
 
       const cell = this.createNode({
         id: n.id,
+        tempId: n.id,
         tipo,
         nombre: n.nombre || this.defaultLabelForTipo(tipo),
         departamentoId: lane.departamentoId,
@@ -1043,6 +1160,24 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     const dx = t.center().x - s.center().x;
     const dy = t.center().y - s.center().y;
 
+    if (Math.abs(dx) > 90 && Math.abs(dy) > 90) {
+      if (dx >= 0 && dy >= 0) {
+        return { source: 'bottomRight', target: 'topLeft' };
+      }
+      if (dx >= 0 && dy < 0) {
+        return { source: 'topRight', target: 'bottomLeft' };
+      }
+      if (dx < 0 && dy >= 0) {
+        return { source: 'bottomLeft', target: 'topRight' };
+      }
+      return { source: 'topLeft', target: 'bottomRight' };
+    }
+
+    const sameLane = (source.get('departamentoId') as string) === (target.get('departamentoId') as string);
+    if (sameLane || Math.abs(dy) > Math.abs(dx)) {
+      return dy >= 0 ? { source: 'bottom', target: 'top' } : { source: 'top', target: 'bottom' };
+    }
+
     if (Math.abs(dx) >= Math.abs(dy)) {
       return dx >= 0 ? { source: 'right', target: 'left' } : { source: 'left', target: 'right' };
     }
@@ -1080,34 +1215,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private showLinkTools(linkView: joint.dia.LinkView): void {
-    const detailsButton = new joint.linkTools.Button({
-      distance: '50%',
-      markup: [
-        {
-          tagName: 'circle',
-          selector: 'button',
-          attributes: {
-            r: 8,
-            fill: '#1F2937',
-            stroke: '#ffffff',
-            'stroke-width': 1
-          }
-        },
-        {
-          tagName: 'path',
-          selector: 'icon',
-          attributes: {
-            d: 'M -2 -2 L 2 -2 L 2 2 L -2 2 Z',
-            fill: '#ffffff'
-          }
-        }
-      ]
-    });
-
+    const vertices = new joint.linkTools.Vertices({ vertexAdding: true });
     const removeButton = new joint.linkTools.Remove({ distance: '76%' });
 
     const tools = new joint.dia.ToolsView({
-      tools: [detailsButton, removeButton]
+      tools: [vertices, removeButton]
     });
 
     linkView.addTools(tools);
@@ -1124,6 +1236,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private setLinkLabel(link: joint.dia.Link, text: string): void {
+    if (!text) {
+      link.labels([]);
+      return;
+    }
+
     link.labels([
       {
         position: 0.5,
@@ -1146,11 +1263,14 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private formatLinkLabel(etiqueta: string, tipo: TransicionTipo): string {
+    if (tipo !== 'ALTERNATIVA') {
+      return '';
+    }
     const clean = etiqueta.trim();
     if (!clean) {
       return '';
     }
-    return tipo === 'ALTERNATIVA' ? `[${clean}]` : clean;
+    return `[${clean}]`;
   }
 
   private unformatLinkLabel(label: string): string {
@@ -1177,7 +1297,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     };
   }
 
-  private editarNombreNodoPrompt(node: joint.dia.Element): void {
+  private abrirModalEdicionNodo(node: joint.dia.Element): void {
     if (node.get('kind') !== 'NODE') {
       return;
     }
@@ -1187,23 +1307,64 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
-    const actual = (node.get('nodeNombre') as string) || this.defaultLabelForTipo(tipo);
-    const nuevo = window.prompt('Nombre del nodo', actual);
-    if (nuevo === null) {
+    this.nodoModalTarget = node;
+    this.nodoModal = {
+      nombre: (node.get('nodeNombre') as string) || this.defaultLabelForTipo(tipo),
+      formularioId: (node.get('formularioId') as string) || ''
+    };
+    this.mostrarModalNodo = true;
+  }
+
+  private esTransicionDeDecision(link: joint.dia.Link | null): boolean {
+    if (!link) {
+      return false;
+    }
+    const source = link.source();
+    if (!source.id) {
+      return false;
+    }
+    const sourceCell = this.graph.getCell(source.id.toString()) as joint.dia.Element | null;
+    return !!sourceCell && sourceCell.get('kind') === 'NODE' && sourceCell.get('nodeTipo') === 'DECISION';
+  }
+
+  private aplicarReglasDeTransicion(link: joint.dia.Link): void {
+    const source = link.source();
+    const target = link.target();
+    if (!source.id || !target.id) {
       return;
     }
 
-    const limpio = nuevo.trim();
-    const nombre = limpio || this.defaultLabelForTipo(tipo);
-    node.set('nodeNombre', nombre);
-    if (tipo !== 'PARALELO') {
-      node.attr('label/text', nombre);
+    const sourceCell = this.graph.getCell(source.id.toString()) as joint.dia.Element | null;
+    const targetCell = this.graph.getCell(target.id.toString()) as joint.dia.Element | null;
+    if (!sourceCell || !targetCell) {
+      return;
     }
 
-    this.selectedElement = node;
-    this.selectedLink = null;
-    this.hasSelection = true;
-    this.syncNodePropsFromSelection();
+    const sourceTipo = sourceCell.get('nodeTipo') as NodoEstado['tipo'];
+    const targetTipo = targetCell.get('nodeTipo') as NodoEstado['tipo'];
+
+    if (sourceTipo === 'DECISION') {
+      const outgoing = this.graph
+        .getLinks()
+        .filter((l) => l.source().id?.toString() === source.id!.toString())
+        .sort((a, b) => a.id.toString().localeCompare(b.id.toString()));
+
+      outgoing.forEach((outLink, index) => {
+        outLink.set('transicionTipo', 'ALTERNATIVA');
+        const etiqueta = index === 0 ? 'Si' : index === 1 ? 'No' : `Opcion ${index + 1}`;
+        this.setLinkLabel(outLink, this.formatLinkLabel(etiqueta, 'ALTERNATIVA'));
+      });
+      return;
+    }
+
+    if (sourceTipo === 'PARALELO' || targetTipo === 'PARALELO') {
+      link.set('transicionTipo', 'PARALELA');
+      this.setLinkLabel(link, '');
+      return;
+    }
+
+    link.set('transicionTipo', 'LINEAL');
+    this.setLinkLabel(link, '');
   }
 
   private togglePorts(element: joint.dia.Element, visible: boolean): void {
@@ -1213,7 +1374,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
     for (const port of element.getPorts()) {
       if (port.id) {
-        element.portProp(port.id, 'attrs/circle/opacity', visible ? 1 : 0);
+        element.portProp(port.id, 'attrs/circle/opacity', visible ? 1 : this.portIdleOpacity);
       }
     }
   }
