@@ -1,4 +1,4 @@
-<div class="page-container">
+<div class="page-container" [class.modo-pantalla-completa]="pantallaCompleta">
   <div class="page-header">
     <div>
       <h1 class="page-title">Editor UML 2.5 - Activity Diagram</h1>
@@ -10,6 +10,9 @@
       </button>
       <button class="btn btn-secondary" (click)="autoOrganizarDiagrama()" [disabled]="cargando" type="button">
         ⊞ Auto organizar
+      </button>
+      <button class="btn btn-secondary" (click)="togglePantallaCompleta()" type="button">
+        {{ pantallaCompleta ? 'Achicar' : 'Agrandar' }}
       </button>
       <button class="btn btn-secondary" (click)="exportarPng()">Exportar PNG</button>
       <button class="btn btn-secondary" (click)="exportarPdf()">Exportar PDF</button>

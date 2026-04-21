@@ -75,7 +75,7 @@ interface ApiTransicionDiagrama {
 export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly laneWidth = 280;
   private readonly laneStartX = 20;
-  private readonly portIdleOpacity = 0.18;
+  private readonly portIdleOpacity = 0.04;
 
   @ViewChild('diagramCanvas', { static: true }) diagramCanvasRef!: ElementRef<HTMLDivElement>;
 
@@ -88,6 +88,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   guardando = false;
   error: string | null = null;
   info: string | null = null;
+  pantallaCompleta = false;
 
   hasSelection = false;
 
@@ -98,6 +99,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private selectedElement: joint.dia.Element | null = null;
   private tempCounter = 0;
   private isApplyingAutoLayout = false;
+  private puertosResaltadosPorFlecha = false;
 
   propiedadesTemp = {
     etiqueta: '',
@@ -445,6 +447,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
   }
 
+  togglePantallaCompleta(): void {
+    this.pantallaCompleta = !this.pantallaCompleta;
+    setTimeout(() => this.ensurePaperDimensions(), 0);
+  }
+
   autoOrganizarDiagrama(): void {
     const nodeElements = this.graph.getElements().filter((el) => el.get('kind') === 'NODE');
     if (nodeElements.length === 0) {
@@ -597,6 +604,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     this.paper.on('blank:pointerdown', () => this.clearSelection());
 
     this.paper.on('element:pointerclick', (view: joint.dia.ElementView) => {
+      this.actualizarResaltadoPuertos(false);
       this.selectedElement = view.model;
       this.selectedLink = null;
       this.hasSelection = true;
@@ -614,10 +622,16 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     this.paper.on('element:mouseenter', (view: joint.dia.ElementView) => {
-      this.togglePorts(view.model, true);
+      if (this.puertosResaltadosPorFlecha) {
+        return;
+      }
+      this.togglePorts(view.model, false);
     });
 
     this.paper.on('element:mouseleave', (view: joint.dia.ElementView) => {
+      if (this.puertosResaltadosPorFlecha) {
+        return;
+      }
       this.togglePorts(view.model, false);
     });
 
@@ -984,8 +998,12 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       if (lane) {
         const size = el.size();
         const pos = el.position();
-        const x = Math.max(lane.x + 16, Math.min(pos.x, lane.x + lane.width - size.width - 16));
-        el.position(x, Math.max(80, pos.y));
+        if (size.width <= lane.width - 32) {
+          const x = Math.max(lane.x + 16, Math.min(pos.x, lane.x + lane.width - size.width - 16));
+          if (x !== pos.x) {
+            el.position(x, pos.y);
+          }
+        }
       }
     });
 
@@ -1324,6 +1342,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private clearSelection(): void {
+    this.actualizarResaltadoPuertos(false);
     this.selectedElement = null;
     this.selectedLink = null;
     this.hasSelection = false;
@@ -1343,6 +1362,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedElement = null;
     this.selectedLink = link;
     this.hasSelection = true;
+    this.actualizarResaltadoPuertos(true);
     this.propiedadesNodoTemp = {
       nombre: '',
       formularioId: ''
@@ -1513,16 +1533,56 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
     for (const port of element.getPorts()) {
       if (port.id) {
-        element.portProp(port.id, 'attrs/circle/opacity', visible ? 1 : this.portIdleOpacity);
+        element.portProp(port.id, 'attrs/circle/opacity', visible ? 0.95 : this.portIdleOpacity);
       }
     }
   }
 
+  private actualizarResaltadoPuertos(resaltar: boolean): void {
+    this.puertosResaltadosPorFlecha = resaltar;
+    this.graph
+      .getElements()
+      .filter((el) => el.get('kind') === 'NODE')
+      .forEach((el) => this.togglePorts(el, resaltar));
+  }
+
+  private calcularAreaCaptura(): { width: number; height: number } {
+    const nodos = this.graph.getElements().filter((el) => el.get('kind') === 'NODE');
+
+    const laneCount = Math.max(1, this.lanes.length);
+    const widthByLanes = this.laneStartX + laneCount * this.laneWidth;
+    let maxNodeBottom = 0;
+    let maxFinBottom = 0;
+
+    nodos.forEach((node) => {
+      const pos = node.position();
+      const size = node.size();
+      const bottom = pos.y + size.height;
+
+      if (bottom > maxNodeBottom) {
+        maxNodeBottom = bottom;
+      }
+
+      if ((node.get('nodeTipo') as NodoEstado['tipo']) === 'FIN' && bottom > maxFinBottom) {
+        maxFinBottom = bottom;
+      }
+    });
+
+    const bottomRef = maxFinBottom > 0 ? maxFinBottom : maxNodeBottom;
+    const targetHeight = Math.max(260, bottomRef + 50);
+    const targetWidth = Math.max(220, widthByLanes);
+
+    return {
+      width: Math.ceil(targetWidth),
+      height: Math.ceil(targetHeight)
+    };
+  }
+
   private async capturarCanvasCompleto(): Promise<HTMLCanvasElement> {
     this.ensurePaperDimensions();
-    const size = this.paper.getComputedSize();
-    const width = Math.ceil(size.width || this.diagramCanvasRef.nativeElement.clientWidth);
-    const height = Math.ceil(size.height || this.diagramCanvasRef.nativeElement.clientHeight);
+    const capture = this.calcularAreaCaptura();
+    const width = capture.width;
+    const height = capture.height;
 
     return html2canvas(this.diagramCanvasRef.nativeElement, {
       backgroundColor: '#ffffff',
