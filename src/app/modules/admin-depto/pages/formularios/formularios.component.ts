@@ -1,9 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FormularioService } from '../../../../core/services/formulario.service';
-import { Nodo, NodoService } from '../../../../core/services/nodo.service';
-import { Politica, PoliticaService } from '../../../../core/services/politica.service';
+import {
+  FormularioDepartamentoItem,
+  FormularioService
+} from '../../../../core/services/formulario.service';
+import { AuthService } from '../../../../core/services/auth.service';
+
+interface PoliticaOption {
+  id: string;
+  nombre: string;
+}
+
+interface NodoOption {
+  id: string;
+  nombre: string;
+  tipo: string;
+}
 
 @Component({
   selector: 'app-formularios-admin-depto',
@@ -13,20 +26,23 @@ import { Politica, PoliticaService } from '../../../../core/services/politica.se
   styleUrls: ['./formularios.component.scss']
 })
 export class FormulariosComponent implements OnInit {
-  politicas: Politica[] = [];
-  nodos: Nodo[] = [];
+  politicas: PoliticaOption[] = [];
+  nodos: NodoOption[] = [];
+  itemsDepartamento: FormularioDepartamentoItem[] = [];
+
   politicaId = '';
   nodoId = '';
   formularioId: string | null = null;
   error: string | null = null;
   guardando = false;
 
+  userDepartamentoId = '';
+
   form!: FormGroup;
 
   constructor(
-    private politicaService: PoliticaService,
-    private nodoService: NodoService,
     private formularioService: FormularioService,
+    private authService: AuthService,
     private fb: FormBuilder
   ) {}
 
@@ -36,10 +52,15 @@ export class FormulariosComponent implements OnInit {
       campos: this.fb.array([])
     });
     this.agregarCampo();
-    this.politicaService.listar().subscribe({
-      next: res => this.politicas = res.data ?? [],
-      error: () => this.error = 'No se pudieron cargar politicas'
-    });
+
+    const user = this.authService.getCurrentUser();
+    if (!user?.departamentoId) {
+      this.error = 'No se pudo identificar el departamento del usuario';
+      return;
+    }
+
+    this.userDepartamentoId = user.departamentoId;
+    this.cargarDatosDepartamento();
   }
 
   get campos(): FormArray {
@@ -47,14 +68,16 @@ export class FormulariosComponent implements OnInit {
   }
 
   agregarCampo(): void {
-    this.campos.push(this.fb.group({
-      nombre: ['', Validators.required],
-      etiqueta: ['', Validators.required],
-      tipo: ['TEXTO', Validators.required],
-      requerido: [true],
-      esCampoPrioridad: [false],
-      opcionesRaw: ['']
-    }));
+    this.campos.push(
+      this.fb.group({
+        nombre: ['', Validators.required],
+        etiqueta: ['', Validators.required],
+        tipo: ['TEXTO', Validators.required],
+        requerido: [true],
+        esCampoPrioridad: [false],
+        opcionesRaw: ['']
+      })
+    );
   }
 
   quitarCampo(index: number): void {
@@ -62,12 +85,34 @@ export class FormulariosComponent implements OnInit {
     this.campos.removeAt(index);
   }
 
-  cargarNodos(): void {
-    if (!this.politicaId) return;
-    this.nodoService.listarPorPolitica(this.politicaId).subscribe({
-      next: res => this.nodos = (res.data ?? []).filter(n => n.tipo === 'TAREA' || n.tipo === 'DECISION'),
-      error: () => this.error = 'No se pudieron cargar nodos'
+  cargarDatosDepartamento(): void {
+    this.formularioService.listarPorDepartamento(this.userDepartamentoId).subscribe({
+      next: (res) => {
+        this.itemsDepartamento = res.data ?? [];
+
+        const politicasMap = new Map<string, PoliticaOption>();
+        this.itemsDepartamento.forEach((item) => {
+          politicasMap.set(item.politicaId, { id: item.politicaId, nombre: item.politicaNombre });
+        });
+
+        this.politicas = Array.from(politicasMap.values());
+        this.cargarNodos();
+      },
+      error: (err) => {
+        this.error = err?.error?.message ?? 'No se pudieron cargar formularios del departamento';
+      }
     });
+  }
+
+  cargarNodos(): void {
+    if (!this.politicaId) {
+      this.nodos = [];
+      return;
+    }
+
+    this.nodos = this.itemsDepartamento
+      .filter((item) => item.politicaId === this.politicaId)
+      .map((item) => ({ id: item.nodoId, nombre: item.nodoNombre, tipo: 'TAREA/DECISION' }));
   }
 
   onPoliticaChange(event: Event): void {
@@ -76,55 +121,54 @@ export class FormulariosComponent implements OnInit {
     this.nodoId = '';
     this.formularioId = null;
     this.cargarNodos();
+    this.resetFormulario();
   }
 
   onNodoChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.nodoId = value;
-    this.cargarFormulario();
+    this.cargarFormularioDesdeLista();
   }
 
-  cargarFormulario(): void {
-    if (!this.nodoId) return;
-    this.formularioService.obtenerPorNodo(this.nodoId).subscribe({
-      next: res => {
-        const data = res.data;
-        if (!data) return;
-        this.formularioId = data.id;
-        this.form.patchValue({ nombre: data.nombre });
-        this.campos.clear();
-        data.campos.forEach(c => {
-          this.campos.push(this.fb.group({
-            nombre: [c.nombre, Validators.required],
-            etiqueta: [c.etiqueta, Validators.required],
-            tipo: [c.tipo, Validators.required],
-            requerido: [c.requerido],
-            esCampoPrioridad: [c.esCampoPrioridad],
-            opcionesRaw: [(c.opciones ?? []).join(',')]
-          }));
-        });
-      },
-      error: () => {
-        this.formularioId = null;
-        this.form.patchValue({ nombre: '' });
-        this.campos.clear();
-        this.agregarCampo();
-      }
+  cargarFormularioDesdeLista(): void {
+    const item = this.itemsDepartamento.find((i) => i.nodoId === this.nodoId);
+    if (!item?.formulario) {
+      this.formularioId = null;
+      this.resetFormulario();
+      return;
+    }
+
+    const data = item.formulario;
+    this.formularioId = data.id;
+    this.form.patchValue({ nombre: data.nombre });
+    this.campos.clear();
+    data.campos.forEach((c) => {
+      this.campos.push(
+        this.fb.group({
+          nombre: [c.nombre, Validators.required],
+          etiqueta: [c.etiqueta, Validators.required],
+          tipo: [c.tipo, Validators.required],
+          requerido: [c.requerido],
+          esCampoPrioridad: [c.esCampoPrioridad],
+          opcionesRaw: [(c.opciones ?? []).join(',')]
+        })
+      );
     });
   }
 
   guardar(): void {
     if (this.form.invalid || !this.politicaId || !this.nodoId) {
-      this.error = 'Selecciona politica/nodo y completa el formulario';
+      this.error = 'Selecciona política/nodo y completa el formulario';
       return;
     }
+
     this.guardando = true;
     const request = {
       politicaId: this.politicaId,
       nodoId: this.nodoId,
       nombre: this.form.value.nombre,
       generadoPorIa: false,
-      campos: this.campos.controls.map(ctrl => ({
+      campos: this.campos.controls.map((ctrl) => ({
         nombre: ctrl.value.nombre,
         etiqueta: ctrl.value.etiqueta,
         tipo: ctrl.value.tipo,
@@ -136,18 +180,26 @@ export class FormulariosComponent implements OnInit {
           .filter((v: string) => v.length > 0)
       }))
     };
+
     const op = this.formularioId
       ? this.formularioService.actualizar(this.formularioId, request)
       : this.formularioService.crear(request);
+
     op.subscribe({
-      next: res => {
+      next: () => {
         this.guardando = false;
-        this.formularioId = res.data?.id ?? this.formularioId;
+        this.cargarDatosDepartamento();
       },
-      error: err => {
+      error: (err) => {
         this.guardando = false;
         this.error = err?.error?.message ?? 'No se pudo guardar';
       }
     });
+  }
+
+  private resetFormulario(): void {
+    this.form.patchValue({ nombre: '' });
+    this.campos.clear();
+    this.agregarCampo();
   }
 }

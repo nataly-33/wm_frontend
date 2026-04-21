@@ -1,0 +1,29 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mis Trámites</h1>
+      <p class="page-subtitle">Trámites que pasan por tu departamento</p>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando trámites...</p>
+  </div>
+
+  <div *ngIf="!cargando && !error && tramites.length === 0" class="empty-state">
+    <h3>Sin trámites</h3>
+    <p>No hay trámites asociados a este departamento.</p>
+  </div>
+
+  <section class="tramites-grid" *ngIf="!cargando && tramites.length > 0">
+    <article class="tramite-card" *ngFor="let t of tramites">
+      <h3>{{ t.titulo }}</h3>
+      <p class="meta">Prioridad: <strong>{{ t.prioridad }}</strong></p>
+      <p class="meta">Estado: <strong>{{ t.estadoGeneral }}</strong></p>
+      <p class="meta">Inicio: {{ t.iniciadoEn | date: 'short' }}</p>
+    </article>
+  </section>
+</div>
