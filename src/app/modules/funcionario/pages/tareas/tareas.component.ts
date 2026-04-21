@@ -28,20 +28,19 @@ export class TareasComponent implements OnInit {
 
   cargarTareas(): void {
     const user = this.authService.getCurrentUser();
-    if (!user || (!user.departamentoId && user.rol !== 'ADMIN_DEPARTAMENTO' && user.rol !== 'FUNCIONARIO')) {
+    if (!user?.id) {
       return;
     }
-    
-    // Suponemos que todos en el departamento ven las tareas del departamento, o el backend ya filtro.
+
     this.cargando = true;
-    this.ejecucionService.listarPorDepartamento(user.departamentoId || '').pipe(
+    this.ejecucionService.listarPorFuncionario(user.id).pipe(
       timeout(15000),
       finalize(() => this.cargando = false)
     ).subscribe({
       next: (res) => {
         this.tareas = res.data ?? [];
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Error al cargar tareas';
       }
     });
