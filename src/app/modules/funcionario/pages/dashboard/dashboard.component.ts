@@ -15,10 +15,7 @@ import { SidebarComponent, SidebarItem } from '../../../../shared/components/sid
 export class DashboardComponent implements OnInit {
   userName: string = '';
   sidebarItems: SidebarItem[] = [
-    { label: 'Mis Tareas', icon: '▸', route: '/funcionario' },
-    { label: 'Formularios', icon: '▸', route: '/funcionario/formularios' },
-    { label: 'Historial', icon: '▸', route: '/funcionario/historial' },
-    { label: 'Monitor', icon: '▸', route: '/funcionario/monitor' }
+    { label: 'Mis Tareas', icon: '▸', route: '/funcionario/tareas' }
   ];
 
   constructor(
