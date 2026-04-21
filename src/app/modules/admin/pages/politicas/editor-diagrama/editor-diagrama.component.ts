@@ -18,6 +18,14 @@ import {
 import { Departamento, DepartamentoService } from '../../../../../core/services/departamento.service';
 import { EstadoEditor, NodoEstado, TransicionEstado, validarDiagramaDetallado } from './diagram-validators';
 import { TransicionTipo } from '../../../../../core/services/transicion.service';
+import {
+  LayoutCarrilInput,
+  LayoutNodeSize,
+  LayoutNodoInput,
+  LayoutNodoTipo,
+  LayoutTransicionInput,
+  calcularLayout
+} from './diagram-layout.util';
 
 interface LaneState {
   laneId: string;
@@ -36,6 +44,25 @@ interface NodePayload {
   formularioId?: string;
   posicionX?: number;
   posicionY?: number;
+  ancho?: number;
+  alto?: number;
+}
+
+interface ApiNodoDiagrama {
+  id: string;
+  tipo?: string | null;
+  nombre?: string | null;
+  departamentoId?: string | null;
+  formularioId?: string | null;
+}
+
+interface ApiTransicionDiagrama {
+  id?: string | null;
+  nodoOrigenId: string;
+  nodoDestinoId: string;
+  tipo?: string | null;
+  etiqueta?: string | null;
+  condicion?: string | null;
 }
 
 @Component({
@@ -46,7 +73,8 @@ interface NodePayload {
   styleUrls: ['./editor-diagrama.component.scss']
 })
 export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy {
-  private readonly laneWidth = 220;
+  private readonly laneWidth = 280;
+  private readonly laneStartX = 20;
   private readonly portIdleOpacity = 0.18;
 
   @ViewChild('diagramCanvas', { static: true }) diagramCanvasRef!: ElementRef<HTMLDivElement>;
@@ -69,6 +97,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private selectedLink: joint.dia.Link | null = null;
   private selectedElement: joint.dia.Element | null = null;
   private tempCounter = 0;
+  private isApplyingAutoLayout = false;
 
   propiedadesTemp = {
     etiqueta: '',
@@ -416,6 +445,94 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
   }
 
+  autoOrganizarDiagrama(): void {
+    const nodeElements = this.graph.getElements().filter((el) => el.get('kind') === 'NODE');
+    if (nodeElements.length === 0) {
+      this.info = 'No hay nodos para auto organizar.';
+      return;
+    }
+
+    const layoutIdByGraphId = new Map<string, string>();
+    const layoutNodes: LayoutNodoInput[] = nodeElements.map((el) => {
+      const key = this.layoutNodeKeyFromElement(el);
+      layoutIdByGraphId.set(el.id.toString(), key);
+      return {
+        id: key,
+        tipo: this.normalizeNodoTipo(el.get('nodeTipo') as string | undefined) as LayoutNodoTipo,
+        departamentoId: (el.get('departamentoId') as string | undefined) ?? undefined
+      };
+    });
+
+    const layoutTransitions: LayoutTransicionInput[] = this.graph.getLinks().flatMap((link) => {
+      const srcGraphId = link.source().id?.toString();
+      const tgtGraphId = link.target().id?.toString();
+      if (!srcGraphId || !tgtGraphId) {
+        return [];
+      }
+      const sourceId = layoutIdByGraphId.get(srcGraphId);
+      const targetId = layoutIdByGraphId.get(tgtGraphId);
+      if (!sourceId || !targetId || sourceId === targetId) {
+        return [];
+      }
+      return [{ nodoOrigenId: sourceId, nodoDestinoId: targetId }];
+    });
+
+    const layout = calcularLayout(layoutNodes, layoutTransitions, this.buildLayoutCarriles(), {
+      laneWidth: this.laneWidth,
+      laneStartX: this.laneStartX,
+      nodeSizeByTipo: this.buildLayoutNodeSizeOverrides()
+    });
+
+    this.rebuildLanesFromLayout(layout.lanes);
+
+    this.isApplyingAutoLayout = true;
+    try {
+      for (const el of nodeElements) {
+        const key = this.layoutNodeKeyFromElement(el);
+        const position = layout.positions.get(key);
+        if (!position) {
+          continue;
+        }
+
+        const tipo = this.normalizeNodoTipo(el.get('nodeTipo') as string | undefined);
+        const baseSize = this.getNodeSize(tipo);
+        if (tipo === 'PARALELO') {
+          const ancho = Math.max(baseSize.w, position.width);
+          if (el.size().width !== ancho || el.size().height !== baseSize.h) {
+            el.resize(ancho, baseSize.h, { silent: true });
+          }
+        }
+
+        el.position(position.x, position.y);
+        el.set('departamentoId', position.laneId);
+        this.configureNodePorts(el, true);
+      }
+    } finally {
+      this.isApplyingAutoLayout = false;
+    }
+
+    this.graph.getLinks().forEach((link) => {
+      const sourceId = link.source().id?.toString();
+      const targetId = link.target().id?.toString();
+      if (!sourceId || !targetId) {
+        return;
+      }
+      const sourceEl = this.graph.getCell(sourceId) as joint.dia.Element | null;
+      const targetEl = this.graph.getCell(targetId) as joint.dia.Element | null;
+      if (!sourceEl || !targetEl) {
+        return;
+      }
+      const ports = this.pickPorts(sourceEl, targetEl);
+      link.source({ id: sourceEl.id, port: ports.source });
+      link.target({ id: targetEl.id, port: ports.target });
+      this.aplicarReglasDeTransicion(link);
+    });
+
+    this.ensurePaperDimensions();
+    this.error = null;
+    this.info = 'Diagrama organizado automaticamente.';
+  }
+
   private initJointEditor(): void {
     this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
 
@@ -505,6 +622,9 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     this.graph.on('change:position', (cell: joint.dia.Cell) => {
+      if (this.isApplyingAutoLayout) {
+        return;
+      }
       if (!cell.isElement() || cell.get('kind') !== 'NODE') {
         return;
       }
@@ -565,7 +685,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private createNode(payload: NodePayload): joint.dia.Element {
-    const size = this.getNodeSize(payload.tipo);
+    const defaultSize = this.getNodeSize(payload.tipo);
+    const size = {
+      w: payload.ancho ?? defaultSize.w,
+      h: payload.alto ?? defaultSize.h
+    };
     const position = {
       x: payload.posicionX ?? 40,
       y: payload.posicionY ?? 90
@@ -881,52 +1005,87 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private reconstruirDesdeApi(data: DiagramaResponse): void {
-    const nodos = (data.nodos ?? []) as Array<any>;
-    const transiciones = (data.transiciones ?? []) as Array<any>;
+    const nodos = (data.nodos ?? []).flatMap((raw): ApiNodoDiagrama[] => {
+      const n = raw as Partial<ApiNodoDiagrama>;
+      if (typeof n.id !== 'string' || n.id.trim().length === 0) {
+        return [];
+      }
+      return [
+        {
+          id: n.id,
+          tipo: n.tipo ?? null,
+          nombre: n.nombre ?? null,
+          departamentoId: n.departamentoId ?? null,
+          formularioId: n.formularioId ?? null
+        }
+      ];
+    });
+
+    const transiciones = (data.transiciones ?? []).flatMap((raw): ApiTransicionDiagrama[] => {
+      const t = raw as Partial<ApiTransicionDiagrama>;
+      if (typeof t.nodoOrigenId !== 'string' || typeof t.nodoDestinoId !== 'string') {
+        return [];
+      }
+      return [
+        {
+          id: typeof t.id === 'string' ? t.id : null,
+          nodoOrigenId: t.nodoOrigenId,
+          nodoDestinoId: t.nodoDestinoId,
+          tipo: t.tipo ?? null,
+          etiqueta: t.etiqueta ?? null,
+          condicion: t.condicion ?? null
+        }
+      ];
+    });
+
     if (nodos.length === 0) {
       return;
     }
 
-    const deptOrder = this.buildDeptOrder(nodos, this.departamentosCompletos);
-    deptOrder.forEach((d) => this.insertLane(d.id, d.nombre));
+    const layout = calcularLayout(
+      nodos.map((n) => ({
+        id: n.id,
+        tipo: this.normalizeNodoTipo(n.tipo) as LayoutNodoTipo,
+        departamentoId: n.departamentoId ?? undefined
+      } as LayoutNodoInput)),
+      transiciones.map((t) => ({
+        nodoOrigenId: t.nodoOrigenId,
+        nodoDestinoId: t.nodoDestinoId
+      } as LayoutTransicionInput)),
+      this.buildLayoutCarriles(),
+      {
+        laneWidth: this.laneWidth,
+        laneStartX: this.laneStartX,
+        nodeSizeByTipo: this.buildLayoutNodeSizeOverrides()
+      }
+    );
 
-    const topoIndex = this.computeTopologicalOrder(nodos, transiciones);
+    this.rebuildLanesFromLayout(layout.lanes);
+
     const nodeByDbId = new Map<string, joint.dia.Element>();
 
-    const sortedNodes = [...nodos].sort((a, b) => {
-      const ai = topoIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bi = topoIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      if (ai !== bi) {
-        return ai - bi;
-      }
-      return Number(a.posicionY ?? 0) - Number(b.posicionY ?? 0);
-    });
+    const sortedNodes = [...nodos].sort((a, b) => (layout.levels.get(a.id) ?? 0) - (layout.levels.get(b.id) ?? 0));
 
     for (const n of sortedNodes) {
-      const tipo = ((n.tipo as NodoEstado['tipo']) || 'TAREA');
-      const dep = this.resolveDeptForNode(n, transiciones, nodos);
-      const lane = dep ? this.lanes.find((l) => l.departamentoId === dep) : this.lanes[0];
-      if (!lane) {
+      const tipo = this.normalizeNodoTipo(n.tipo);
+      const position = layout.positions.get(n.id);
+      if (!position) {
         continue;
       }
 
-      const size = this.getNodeSize(tipo);
-      const xBase = Number(n.posicionX ?? Number.NaN);
-      const xCenter = Number.isFinite(xBase) ? xBase : lane.x + (lane.width - size.w) / 2;
-      const x = Math.max(lane.x + 16, Math.min(xCenter, lane.x + lane.width - size.w - 16));
-      const yBase = Number(n.posicionY ?? Number.NaN);
-      const yByOrder = 110 + (topoIndex.get(n.id) ?? 0) * 130;
-      const y = Math.max(80, Number.isFinite(yBase) ? yBase : yByOrder);
+      const defaultSize = this.getNodeSize(tipo);
+      const ancho = tipo === 'PARALELO' && position.width > defaultSize.w ? position.width : undefined;
 
       const cell = this.createNode({
         id: n.id,
         tempId: n.id,
         tipo,
         nombre: n.nombre || this.defaultLabelForTipo(tipo),
-        departamentoId: lane.departamentoId,
+        departamentoId: position.laneId,
         formularioId: n.formularioId || undefined,
-        posicionX: x,
-        posicionY: y
+        posicionX: position.x,
+        posicionY: position.y,
+        ancho
       });
 
       nodeByDbId.set(n.id, cell);
@@ -952,113 +1111,88 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
-  private computeTopologicalOrder(nodos: Array<any>, transiciones: Array<any>): Map<string, number> {
-    const order = new Map<string, number>();
-    const indegree = new Map<string, number>();
-    const adj = new Map<string, string[]>();
-
-    nodos.forEach((n) => {
-      indegree.set(n.id, 0);
-      adj.set(n.id, []);
-    });
-
-    transiciones.forEach((t) => {
-      if (!adj.has(t.nodoOrigenId) || !indegree.has(t.nodoDestinoId)) {
-        return;
-      }
-      adj.get(t.nodoOrigenId)!.push(t.nodoDestinoId);
-      indegree.set(t.nodoDestinoId, (indegree.get(t.nodoDestinoId) || 0) + 1);
-    });
-
-    const queue: string[] = [];
-    const inicio = nodos.find((n) => n.tipo === 'INICIO');
-    if (inicio?.id) {
-      queue.push(inicio.id);
+  private normalizeNodoTipo(raw: string | null | undefined): NodoEstado['tipo'] {
+    if (raw === 'INICIO' || raw === 'TAREA' || raw === 'DECISION' || raw === 'FIN' || raw === 'PARALELO') {
+      return raw;
     }
-
-    if (queue.length === 0) {
-      indegree.forEach((value, key) => {
-        if (value === 0) {
-          queue.push(key);
-        }
-      });
-    }
-
-    let idx = 0;
-    const visited = new Set<string>();
-
-    while (queue.length > 0) {
-      const u = queue.shift()!;
-      if (visited.has(u)) {
-        continue;
-      }
-      visited.add(u);
-      order.set(u, idx++);
-
-      for (const v of adj.get(u) ?? []) {
-        const next = (indegree.get(v) || 0) - 1;
-        indegree.set(v, next);
-        if (next <= 0) {
-          queue.push(v);
-        }
-      }
-    }
-
-    nodos.forEach((n) => {
-      if (!order.has(n.id)) {
-        order.set(n.id, idx++);
-      }
-    });
-
-    return order;
+    return 'TAREA';
   }
 
-  private resolveDeptForNode(node: any, transiciones: Array<any>, nodos: Array<any>): string {
-    if (node.departamentoId) {
-      return node.departamentoId;
-    }
+  private buildLayoutCarriles(): LayoutCarrilInput[] {
+    const byId = new Map<string, string>();
 
-    const out = transiciones.find((t) => t.nodoOrigenId === node.id);
-    if (out) {
-      const dst = nodos.find((n) => n.id === out.nodoDestinoId);
-      if (dst?.departamentoId) {
-        return dst.departamentoId;
+    this.departamentosCompletos.forEach((d) => byId.set(d.id, d.nombre));
+    this.lanes.forEach((lane) => {
+      if (!byId.has(lane.departamentoId)) {
+        byId.set(lane.departamentoId, lane.nombreDepartamento);
       }
-    }
+    });
 
-    const incoming = transiciones.find((t) => t.nodoDestinoId === node.id);
-    if (incoming) {
-      const src = nodos.find((n) => n.id === incoming.nodoOrigenId);
-      if (src?.departamentoId) {
-        return src.departamentoId;
-      }
-    }
-
-    return this.lanes[0]?.departamentoId || '';
-  }
-
-  private buildDeptOrder(
-    nodos: Array<{ departamentoId?: string | null }>,
-    deptos: Departamento[]
-  ): Array<{ id: string; nombre: string }> {
-    const byId = new Map(deptos.map((d) => [d.id, d.nombre] as const));
+    const orderedIds: string[] = [];
     const seen = new Set<string>();
-    const out: Array<{ id: string; nombre: string }> = [];
 
-    for (const n of nodos) {
-      const id = n.departamentoId;
-      if (!id || seen.has(id)) {
-        continue;
+    this.lanes.forEach((lane) => {
+      if (lane.departamentoId && !seen.has(lane.departamentoId)) {
+        seen.add(lane.departamentoId);
+        orderedIds.push(lane.departamentoId);
       }
-      seen.add(id);
-      out.push({ id, nombre: byId.get(id) ?? 'Departamento' });
+    });
+
+    this.departamentosCompletos.forEach((depto) => {
+      if (!seen.has(depto.id)) {
+        seen.add(depto.id);
+        orderedIds.push(depto.id);
+      }
+    });
+
+    return orderedIds.map((id) => ({ id, nombre: byId.get(id) ?? 'Departamento' }));
+  }
+
+  private buildLayoutNodeSizeOverrides(): Partial<Record<LayoutNodoTipo, LayoutNodeSize>> {
+    const inicio = this.getNodeSize('INICIO');
+    const tarea = this.getNodeSize('TAREA');
+    const decision = this.getNodeSize('DECISION');
+    const paralelo = this.getNodeSize('PARALELO');
+    const fin = this.getNodeSize('FIN');
+
+    return {
+      INICIO: { width: inicio.w, height: inicio.h },
+      TAREA: { width: tarea.w, height: tarea.h },
+      DECISION: { width: decision.w, height: decision.h },
+      PARALELO: { width: paralelo.w, height: paralelo.h },
+      PARALELO_FORK: { width: paralelo.w, height: paralelo.h },
+      PARALELO_JOIN: { width: paralelo.w, height: paralelo.h },
+      FIN: { width: fin.w, height: fin.h }
+    };
+  }
+
+  private layoutNodeKeyFromElement(el: joint.dia.Element): string {
+    const dbId = (el.get('nodoDbId') as string | undefined) || '';
+    if (dbId) {
+      return dbId;
+    }
+    const tempId = (el.get('tempId') as string | undefined) || '';
+    if (tempId) {
+      return tempId;
+    }
+    return el.id.toString();
+  }
+
+  private rebuildLanesFromLayout(layoutLanes: LayoutCarrilInput[]): void {
+    const laneCells = this.graph.getElements().filter((el) => el.get('kind') === 'LANE');
+    if (laneCells.length > 0) {
+      this.graph.removeCells(laneCells);
     }
 
-    return out;
+    this.lanes = [];
+
+    layoutLanes.forEach((lane) => {
+      this.insertLane(lane.id, lane.nombre);
+    });
   }
 
   private insertLane(departamentoId: string, nombre: string): void {
-    const x = this.lanes.length * this.laneWidth;
+    const x = this.laneStartX + this.lanes.length * this.laneWidth;
     const laneId = `lane_${departamentoId}`;
 
     const lane = new joint.shapes.standard.Rectangle({
@@ -1095,7 +1229,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
   private reflowLanes(): void {
     this.lanes = this.lanes.map((lane, index) => {
-      const newX = index * this.laneWidth;
+      const newX = this.laneStartX + index * this.laneWidth;
       const cell = this.graph.getCell(lane.laneId) as joint.dia.Element | null;
       const oldX = lane.x;
       const dx = newX - oldX;
@@ -1139,6 +1273,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     const pos = node.position();
     const lane = this.findLaneByX(pos.x + node.size().width / 2);
     if (!lane) {
+      return;
+    }
+
+    if (node.size().width > lane.width - 32) {
+      node.set('departamentoId', lane.departamentoId);
       return;
     }
 
@@ -1458,7 +1597,8 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
-    const minW = Math.max(this.diagramCanvasRef.nativeElement.clientWidth, Math.max(1, this.lanes.length) * this.laneWidth + 700);
+    const lanesWidth = Math.max(1, this.lanes.length) * this.laneWidth;
+    const minW = Math.max(this.diagramCanvasRef.nativeElement.clientWidth, this.laneStartX * 2 + lanesWidth + 520);
     const minH = Math.max(this.diagramCanvasRef.nativeElement.clientHeight, 1600);
 
     this.paper.setDimensions(minW, minH);

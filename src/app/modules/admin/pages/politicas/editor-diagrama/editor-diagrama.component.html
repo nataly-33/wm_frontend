@@ -8,6 +8,9 @@
       <button class="btn btn-primary" (click)="guardarDiagrama()" [disabled]="guardando || cargando">
         {{ guardando ? 'Guardando...' : 'Guardar diagrama' }}
       </button>
+      <button class="btn btn-secondary" (click)="autoOrganizarDiagrama()" [disabled]="cargando" type="button">
+        ⊞ Auto organizar
+      </button>
       <button class="btn btn-secondary" (click)="exportarPng()">Exportar PNG</button>
       <button class="btn btn-secondary" (click)="exportarPdf()">Exportar PDF</button>
     </div>
