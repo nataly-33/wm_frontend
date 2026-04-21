@@ -10,13 +10,73 @@
     <span>{{ error }}</span>
   </div>
 
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando tarea...</p>
+  </div>
+
   <div class="form-container">
     <h3>Rellenar Formulario</h3>
-    <p>Simulación de campos del formulario del nodo.</p>
-    
-    <div class="form-group">
-      <label class="form-label">Respuesta (Ej. "Aprobado", "Rechazado" para una Decisión ALTERNATIVA)</label>
-      <input type="text" class="form-input" [(ngModel)]="respuesta['decision']" placeholder="Escribe tu decision">
+    <p *ngIf="formulario">{{ formulario.nombre }}</p>
+    <p *ngIf="!formulario">Este nodo no tiene formulario. Selecciona/escribe la decisión manual.</p>
+
+    <div *ngIf="cargandoFormulario" class="loading-inline">Cargando formulario...</div>
+
+    <ng-container *ngIf="formulario">
+      <div class="form-group" *ngFor="let campo of formulario.campos">
+        <label class="form-label">{{ campo.etiqueta }}</label>
+
+        <input
+          *ngIf="campo.tipo === 'TEXTO'"
+          type="text"
+          class="form-input"
+          [(ngModel)]="respuesta[campo.nombre]"
+          [required]="campo.requerido"
+        />
+
+        <input
+          *ngIf="campo.tipo === 'NUMERO'"
+          type="number"
+          class="form-input"
+          [(ngModel)]="respuesta[campo.nombre]"
+          [required]="campo.requerido"
+        />
+
+        <input
+          *ngIf="campo.tipo === 'FECHA'"
+          type="date"
+          class="form-input"
+          [(ngModel)]="respuesta[campo.nombre]"
+          [required]="campo.requerido"
+        />
+
+        <select
+          *ngIf="campo.tipo === 'SELECCION'"
+          class="form-input"
+          [(ngModel)]="respuesta[campo.nombre]"
+        >
+          <option value="">Selecciona una opción</option>
+          <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
+        </select>
+
+        <input
+          *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'"
+          type="text"
+          class="form-input"
+          [(ngModel)]="respuesta[campo.nombre]"
+          placeholder="URL del archivo"
+        />
+      </div>
+    </ng-container>
+
+    <div class="form-group" *ngIf="!formulario && !cargandoFormulario">
+      <label class="form-label">Decisión</label>
+      <input
+        type="text"
+        class="form-input"
+        [(ngModel)]="decisionManual"
+        placeholder="Ej. Aprobado / Rechazado"
+      />
     </div>
 
     <div class="form-group">
