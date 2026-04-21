@@ -1,36 +1,81 @@
+.selector-panel {
+  max-width: 380px;
+  margin-bottom: 1rem;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.resumen-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+
+  h4 {
+    margin: 0 0 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  strong {
+    font-size: 20px;
+    color: var(--text-primary);
+  }
+}
+
 .monitor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 .monitor-card {
-  background: white;
-  padding: 1.5rem;
+  background: var(--bg-card);
+  padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
+
+  .chip {
+    display: inline-flex;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #111;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    color: var(--text-primary);
+  }
 
   h3 { margin-bottom: 0.5rem; }
-  p { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
   .status {
     display: flex;
     justify-content: space-between;
     font-weight: 500;
+    color: var(--text-muted);
   }
 }
 
 .sockets-panel {
-  margin-top: 3rem;
-  background: #1e293b;
-  color: white;
-  padding: 1.5rem;
+  margin-top: 2rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 1rem;
   border-radius: 8px;
+  border: 1px solid var(--border);
   
-  h3 { margin-bottom: 1rem; color: #38bdf8; }
+  h3 { margin-bottom: 1rem; color: var(--primary-100); }
 
   .alerta {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #334155;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
     &:last-child { border-bottom: none; }
   }
 
@@ -40,10 +85,7 @@
     font-size: 0.75rem;
     font-weight: bold;
     margin-right: 0.5rem;
-
-    &.COMPLETADO { background: #10b981; color: white; }
-    &.EN_PROCESO { background: #f59e0b; color: white; }
-    &.RECHAZADO { background: #ef4444; color: white; }
-    &.PENDIENTE { background: #3b82f6; color: white; }
+    background: rgba(157, 157, 96, 0.2);
+    color: var(--text-primary);
   }
 }

@@ -2,29 +2,51 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Monitor de politicas</h1>
-      <p class="page-subtitle">Base para semaforo en tiempo real (Dia 6)</p>
+      <p class="page-subtitle">Semaforo en tiempo real por nodo</p>
     </div>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
   <div *ngIf="cargando" class="loading-state"><div class="spinner"></div><p>Cargando monitor...</p></div>
 
-  <div class="monitor-grid" *ngIf="!cargando && politicas.length">
-    <article class="monitor-card" *ngFor="let p of politicas">
-      <h3>{{ p.nombre }}</h3>
-      <p>{{ p.descripcion }}</p>
+  <section class="selector-panel" *ngIf="politicas.length > 0">
+    <label for="politica" class="form-label">Política activa</label>
+    <select id="politica" class="form-input" [value]="politicaSeleccionadaId" (change)="onPoliticaChange($event)">
+      <option *ngFor="let p of politicas" [value]="p.id">{{ p.nombre }}</option>
+    </select>
+  </section>
+
+  <section class="resumen-grid" *ngIf="monitor">
+    <article class="resumen-card">
+      <h4>Activos</h4>
+      <strong>{{ monitor.tramitesActivos.length }}</strong>
+    </article>
+    <article class="resumen-card">
+      <h4>Completados</h4>
+      <strong>{{ monitor.tramitesCompletados }}</strong>
+    </article>
+    <article class="resumen-card">
+      <h4>Rechazados</h4>
+      <strong>{{ monitor.tramitesRechazados }}</strong>
+    </article>
+  </section>
+
+  <div class="monitor-grid" *ngIf="!cargando && monitor?.nodos?.length">
+    <article class="monitor-card" *ngFor="let n of monitor?.nodos">
+      <div class="chip" [style.background]="colorHex[n.color]">{{ n.color }}</div>
+      <h3>Nodo {{ n.nodoId | slice:0:8 }}...</h3>
       <div class="status">
-        <span class="label">Estado:</span>
-        <span class="value">{{ p.estado }}</span>
+        <span class="label">Trámites activos:</span>
+        <span class="value">{{ n.tramitesActivos.length }}</span>
       </div>
     </article>
   </div>
 
-  <div class="sockets-panel" *ngIf="alertas.length > 0">
-    <h3>Alertas en tiempo real (WebSocket)</h3>
-    <div class="alerta" *ngFor="let a of alertas">
-      <span class="badge" [ngClass]="a.estado">{{ a.estado }}</span>
-      Trámite {{ a.tramiteId | slice:0:8 }} cambió su estado en <strong>{{ a.politica }}</strong>
+  <div class="sockets-panel" *ngIf="eventosRecientes.length > 0">
+    <h3>Eventos en tiempo real</h3>
+    <div class="alerta" *ngFor="let e of eventosRecientes">
+      <span class="badge">{{ e.tipo }}</span>
+      Trámite {{ e.tramiteId | slice:0:8 }}
     </div>
   </div>
 </div>
