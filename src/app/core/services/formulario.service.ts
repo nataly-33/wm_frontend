@@ -35,11 +35,38 @@ export interface CrearFormularioRequest {
   generadoPorIa: boolean;
 }
 
+export interface FormularioEmpresaGrupo {
+  politicaId: string;
+  politicaNombre: string;
+  formularios: Array<{
+    formulario: Formulario;
+    nodoId: string;
+    nodoNombre: string;
+    departamentoId: string;
+  }>;
+}
+
+export interface FormularioDepartamentoItem {
+  nodoId: string;
+  nodoNombre: string;
+  politicaId: string;
+  politicaNombre: string;
+  formulario: Formulario | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class FormularioService {
   private readonly baseUrl = `${environment.apiUrl}/api/v1/formularios`;
 
   constructor(private http: HttpClient) {}
+
+  listarPorEmpresa(empresaId: string): Observable<ApiResponse<FormularioEmpresaGrupo[]>> {
+    return this.http.get<ApiResponse<FormularioEmpresaGrupo[]>>(`${this.baseUrl}/empresa/${empresaId}`);
+  }
+
+  listarPorDepartamento(departamentoId: string): Observable<ApiResponse<FormularioDepartamentoItem[]>> {
+    return this.http.get<ApiResponse<FormularioDepartamentoItem[]>>(`${this.baseUrl}/departamento/${departamentoId}`);
+  }
 
   obtenerPorNodo(nodoId: string): Observable<ApiResponse<Formulario>> {
     return this.http.get<ApiResponse<Formulario>>(`${this.baseUrl}/nodo/${nodoId}`);

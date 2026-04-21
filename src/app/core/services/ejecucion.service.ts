@@ -26,12 +26,28 @@ export interface EjecucionNodo {
   providedIn: 'root'
 })
 export class EjecucionService {
-  private apiUrl = `${environment.apiUrl}/ejecuciones`;
+  private apiUrl = `${environment.apiUrl}/api/v1/ejecuciones`;
 
   constructor(private http: HttpClient) {}
 
   listarPorDepartamento(departamentoId: string): Observable<ApiResponse<EjecucionNodo[]>> {
     return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/departamento/${departamentoId}`);
+  }
+
+  listarPorFuncionario(usuarioId: string): Observable<ApiResponse<EjecucionNodo[]>> {
+    return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/funcionario/${usuarioId}`);
+  }
+
+  listarPorTramite(tramiteId: string): Observable<ApiResponse<EjecucionNodo[]>> {
+    return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/tramite/${tramiteId}`);
+  }
+
+  obtener(id: string): Observable<ApiResponse<EjecucionNodo>> {
+    return this.http.get<ApiResponse<EjecucionNodo>>(`${this.apiUrl}/${id}`);
+  }
+
+  iniciar(id: string): Observable<ApiResponse<EjecucionNodo>> {
+    return this.http.put<ApiResponse<EjecucionNodo>>(`${this.apiUrl}/${id}/iniciar`, {});
   }
 
   completar(id: string, respuestaFormulario: any): Observable<any> {
@@ -40,5 +56,9 @@ export class EjecucionService {
 
   rechazar(id: string, observaciones: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/rechazar`, { observaciones });
+  }
+
+  reasignar(id: string, funcionarioId: string): Observable<ApiResponse<EjecucionNodo>> {
+    return this.http.put<ApiResponse<EjecucionNodo>>(`${this.apiUrl}/${id}/reasignar`, { funcionarioId });
   }
 }

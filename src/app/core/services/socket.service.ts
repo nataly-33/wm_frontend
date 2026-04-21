@@ -11,7 +11,8 @@ import { AuthService } from './auth.service';
 export class SocketService {
   private client!: Client;
   private notificacionesSubject = new Subject<any>();
-  private monitorSubject = new Subject<any>();
+  private monitorSubjects = new Map<string, Subject<any>>();
+  private monitorSubscriptions = new Set<string>();
 
   constructor(private authService: AuthService) {
     this.conectar();
@@ -45,21 +46,31 @@ export class SocketService {
   }
 
   suscribirAMonitor(politicaId: string): Observable<any> {
+    if (!this.monitorSubjects.has(politicaId)) {
+      this.monitorSubjects.set(politicaId, new Subject<any>());
+    }
+
+    const monitorSubject = this.monitorSubjects.get(politicaId)!;
+    const topic = `/topic/politica/${politicaId}`;
+
+    const intentarSuscripcion = () => {
+      if (this.client && this.client.connected && !this.monitorSubscriptions.has(topic)) {
+        this.client.subscribe(topic, (message: Message) => {
+          monitorSubject.next(JSON.parse(message.body));
+        });
+        this.monitorSubscriptions.add(topic);
+      }
+    };
+
     if (this.client && this.client.connected) {
-      this.client.subscribe(`/topic/politica/${politicaId}`, (message: Message) => {
-        this.monitorSubject.next(JSON.parse(message.body));
-      });
+      intentarSuscripcion();
     } else {
-      // Reintentar o poner callbacks si no esta listo
       setTimeout(() => {
-        if (this.client && this.client.connected) {
-          this.client.subscribe(`/topic/politica/${politicaId}`, (message: Message) => {
-            this.monitorSubject.next(JSON.parse(message.body));
-          });
-        }
+        intentarSuscripcion();
       }, 2000);
     }
-    return this.monitorSubject.asObservable();
+
+    return monitorSubject.asObservable();
   }
 
   getNotificaciones(): Observable<any> {

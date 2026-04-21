@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
+import { EjecucionNodo } from './ejecucion.service';
 
 export interface Tramite {
   id: string;
@@ -18,11 +19,38 @@ export interface Tramite {
   finalizadoEn?: Date;
 }
 
+export interface TramiteDetalle {
+  tramite: Tramite;
+  ejecuciones: EjecucionNodo[];
+}
+
+export interface MonitorNodoEstado {
+  nodoId: string;
+  color: 'VERDE' | 'AMARILLO' | 'ROJO' | 'NARANJA' | 'GRIS';
+  tramitesActivos: Array<{
+    tramiteId: string;
+    titulo: string;
+    prioridad: string;
+  }>;
+}
+
+export interface MonitorPoliticaResponse {
+  nodos: MonitorNodoEstado[];
+  tramitesActivos: Array<{
+    tramiteId: string;
+    titulo: string;
+    prioridad: string;
+    estado: string;
+  }>;
+  tramitesCompletados: number;
+  tramitesRechazados: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class TramiteService {
-  private apiUrl = `${environment.apiUrl}/tramites`;
+  private apiUrl = `${environment.apiUrl}/api/v1/tramites`;
 
   constructor(private http: HttpClient) {}
 
@@ -34,7 +62,23 @@ export class TramiteService {
     return this.http.get<ApiResponse<Tramite[]>>(`${this.apiUrl}/empresa/${empresaId}`);
   }
 
-  obtener(id: string): Observable<ApiResponse<Tramite>> {
-    return this.http.get<ApiResponse<Tramite>>(`${this.apiUrl}/${id}`);
+  listarPorPolitica(politicaId: string): Observable<ApiResponse<Tramite[]>> {
+    return this.http.get<ApiResponse<Tramite[]>>(`${this.apiUrl}/politica/${politicaId}`);
+  }
+
+  listarPorDepartamento(departamentoId: string): Observable<ApiResponse<Tramite[]>> {
+    return this.http.get<ApiResponse<Tramite[]>>(`${this.apiUrl}/departamento/${departamentoId}`);
+  }
+
+  obtener(id: string): Observable<ApiResponse<TramiteDetalle>> {
+    return this.http.get<ApiResponse<TramiteDetalle>>(`${this.apiUrl}/${id}`);
+  }
+
+  cancelar(id: string): Observable<ApiResponse<Tramite>> {
+    return this.http.put<ApiResponse<Tramite>>(`${this.apiUrl}/${id}/cancelar`, {});
+  }
+
+  obtenerMonitor(politicaId: string): Observable<ApiResponse<MonitorPoliticaResponse>> {
+    return this.http.get<ApiResponse<MonitorPoliticaResponse>>(`${this.apiUrl}/monitor/${politicaId}`);
   }
 }
