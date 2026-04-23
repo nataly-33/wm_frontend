@@ -54,6 +54,12 @@ export interface FormularioDepartamentoItem {
   formulario: Formulario | null;
 }
 
+export interface FormulariosAgrupadosPorPolitica {
+  politicaId: string;
+  politicaNombre: string;
+  formularios: FormularioDepartamentoItem[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class FormularioService {
   private readonly baseUrl = `${environment.apiUrl}/api/v1/formularios`;
