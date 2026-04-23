@@ -1,0 +1,109 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Formularios</h1>
+      <p class="page-subtitle">CRUD completo de formularios por política y nodo</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModalCrear()">Crear formulario</button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <section class="panel-light" *ngIf="politicasActivas.length > 0">
+    <h3>Crear por política activa</h3>
+    <div class="active-policies">
+      <div class="policy-chip" *ngFor="let p of politicasActivas">
+        <span>{{ p.nombre }}</span>
+        <button class="btn btn-secondary mini" (click)="abrirModalCrear(p.id)">Crear formulario</button>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando formularios...</p>
+  </div>
+
+  <div *ngIf="!cargando && gruposVista.length === 0" class="empty-state">
+    <h3>Sin formularios</h3>
+    <p>Aún no se registraron formularios activos en la empresa.</p>
+  </div>
+
+  <section class="politica-block" *ngFor="let grupo of gruposVista">
+    <div class="policy-header">
+      <h3>{{ grupo.politicaNombre }}</h3>
+      <button class="btn btn-secondary mini" (click)="abrirModalCrear(grupo.politicaId)">Nuevo formulario</button>
+    </div>
+
+    <div class="form-grid">
+      <article class="form-card" *ngFor="let item of grupo.formularios">
+        <h4>{{ item.formulario?.nombre }}</h4>
+        <p class="meta">Nodo: {{ item.nodoNombre }}</p>
+        <p class="meta">Campos: {{ item.formulario?.campos?.length ?? 0 }}</p>
+
+        <div class="card-actions">
+          <button class="btn btn-secondary mini" (click)="abrirModalEditar(item)">Editar</button>
+          <button class="btn btn-danger mini" (click)="eliminarFormulario(item)" [disabled]="eliminando">Eliminar</button>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="mostrarModal">
+  <div class="modal-dialog form-modal">
+    <div class="modal-header">
+      <h2>{{ modo === 'editar' ? 'Editar formulario' : 'Crear formulario' }}</h2>
+      <button class="btn-close-modal" (click)="cerrarModal()">×</button>
+    </div>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="selectors">
+        <select class="form-input" formControlName="politicaId" (change)="onPoliticaChange()">
+          <option value="">Selecciona política activa</option>
+          <option *ngFor="let p of politicasActivas" [value]="p.id">{{ p.nombre }}</option>
+        </select>
+
+        <select class="form-input" formControlName="nodoId">
+          <option value="">Selecciona nodo</option>
+          <option *ngFor="let n of nodosPoliticaSeleccionada" [value]="n.id">{{ n.nombre }} ({{ n.tipo }})</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre del formulario</label>
+        <input class="form-input" formControlName="nombre" />
+      </div>
+
+      <div formArrayName="campos" class="campo-list">
+        <div class="campo-item" *ngFor="let campo of campos.controls; let i = index" [formGroupName]="i">
+          <input class="form-input" formControlName="nombre" placeholder="nombre técnico" />
+          <input class="form-input" formControlName="etiqueta" placeholder="etiqueta" />
+
+          <select class="form-input" formControlName="tipo">
+            <option value="TEXTO">TEXTO</option>
+            <option value="NUMERO">NUMERO</option>
+            <option value="FECHA">FECHA</option>
+            <option value="SELECCION">SELECCION</option>
+            <option value="ARCHIVO">ARCHIVO</option>
+            <option value="IMAGEN">IMAGEN</option>
+          </select>
+
+          <input class="form-input" formControlName="opcionesRaw" placeholder="opciones: A,B,C" />
+
+          <label><input type="checkbox" formControlName="requerido" /> Requerido</label>
+          <label><input type="checkbox" formControlName="esCampoPrioridad" /> Prioridad</label>
+
+          <button type="button" class="btn btn-danger mini" (click)="quitarCampo(i)">Quitar</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" (click)="agregarCampo()">Agregar campo</button>
+        <button type="submit" class="btn btn-primary" [disabled]="guardando">
+          {{ guardando ? 'Guardando...' : (modo === 'editar' ? 'Actualizar' : 'Crear') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
