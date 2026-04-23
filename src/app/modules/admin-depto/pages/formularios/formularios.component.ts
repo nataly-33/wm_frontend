@@ -3,7 +3,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   FormularioDepartamentoItem,
-  FormularioService
+  FormularioService,
+  FormulariosAgrupadosPorPolitica
 } from '../../../../core/services/formulario.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
@@ -29,6 +30,7 @@ export class FormulariosComponent implements OnInit {
   politicas: PoliticaOption[] = [];
   nodos: NodoOption[] = [];
   itemsDepartamento: FormularioDepartamentoItem[] = [];
+  gruposVista: FormulariosAgrupadosPorPolitica[] = [];
 
   politicaId = '';
   nodoId = '';
@@ -89,6 +91,7 @@ export class FormulariosComponent implements OnInit {
     this.formularioService.listarPorDepartamento(this.userDepartamentoId).subscribe({
       next: (res) => {
         this.itemsDepartamento = res.data ?? [];
+        this.gruposVista = this.agruparPorPolitica(this.itemsDepartamento);
 
         const politicasMap = new Map<string, PoliticaOption>();
         this.itemsDepartamento.forEach((item) => {
@@ -102,6 +105,51 @@ export class FormulariosComponent implements OnInit {
         this.error = err?.error?.message ?? 'No se pudieron cargar formularios del departamento';
       }
     });
+  }
+
+  editarDesdeListado(item: FormularioDepartamentoItem): void {
+    this.politicaId = item.politicaId;
+    this.cargarNodos();
+    this.nodoId = item.nodoId;
+    this.cargarFormularioDesdeLista();
+  }
+
+  eliminarDesdeListado(item: FormularioDepartamentoItem): void {
+    if (!item.formulario) {
+      this.error = 'Este nodo no tiene formulario para eliminar';
+      return;
+    }
+
+    this.guardando = true;
+    this.formularioService.eliminar(item.formulario.id).subscribe({
+      next: () => {
+        this.guardando = false;
+        this.cargarDatosDepartamento();
+        if (this.nodoId === item.nodoId) {
+          this.formularioId = null;
+          this.resetFormulario();
+        }
+      },
+      error: (err) => {
+        this.guardando = false;
+        this.error = err?.error?.message ?? 'No se pudo eliminar';
+      }
+    });
+  }
+
+  private agruparPorPolitica(items: FormularioDepartamentoItem[]): FormulariosAgrupadosPorPolitica[] {
+    const mapa = new Map<string, FormulariosAgrupadosPorPolitica>();
+    items.forEach((item) => {
+      if (!mapa.has(item.politicaId)) {
+        mapa.set(item.politicaId, {
+          politicaId: item.politicaId,
+          politicaNombre: item.politicaNombre,
+          formularios: []
+        });
+      }
+      mapa.get(item.politicaId)!.formularios.push(item);
+    });
+    return Array.from(mapa.values());
   }
 
   cargarNodos(): void {

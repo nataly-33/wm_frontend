@@ -8,6 +8,37 @@
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
 
+  <section class="panel-light" *ngIf="gruposVista.length > 0">
+    <h3>Listado de formularios de mi departamento</h3>
+    <div class="group-list">
+      <article class="policy-group" *ngFor="let grupo of gruposVista">
+        <h4>{{ grupo.politicaNombre }}</h4>
+        <div class="form-list">
+          <div class="form-item" *ngFor="let item of grupo.formularios">
+            <div>
+              <strong>{{ item.nodoNombre }}</strong>
+              <p>{{ item.formulario?.nombre || 'Sin formulario creado' }}</p>
+            </div>
+
+            <div class="item-actions">
+              <button class="btn btn-secondary mini" (click)="editarDesdeListado(item)">
+                {{ item.formulario ? 'Editar' : 'Crear' }}
+              </button>
+              <button
+                *ngIf="item.formulario"
+                class="btn btn-danger mini"
+                (click)="eliminarDesdeListado(item)"
+                [disabled]="guardando"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <section class="panel-light">
     <div class="selectors">
       <select class="form-input light" [value]="politicaId" (change)="onPoliticaChange($event)">

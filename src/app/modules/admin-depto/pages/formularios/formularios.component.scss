@@ -19,6 +19,49 @@
   border: 1px solid #cfd8c7;
 }
 
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.policy-group {
+  border: 1px solid #dce5d4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+
+  h4 {
+    margin: 0 0 10px;
+  }
+}
+
+.form-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #edf3e7;
+  border-radius: 10px;
+  padding: 8px 10px;
+
+  p {
+    margin: 2px 0 0;
+    color: #4b5e41;
+    font-size: 12px;
+  }
+}
+
+.item-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .campo-list {
   display: flex;
   flex-direction: column;
@@ -49,6 +92,12 @@
 @media (max-width: 980px) {
   .selectors {
     grid-template-columns: 1fr;
+  }
+
+  .form-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .campo-item {
