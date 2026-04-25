@@ -1,12 +1,23 @@
 <div class="page-container">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Monitor en tiempo real</h1>
-      <p class="page-subtitle">Estado de nodos por política activa</p>
+
+  <!-- Header con stats en línea -->
+  <div class="monitor-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        Monitor
+        <span class="politica-nombre" *ngIf="monitor?.nombrePolitica"> — {{ monitor!.nombrePolitica }}</span>
+      </h1>
     </div>
-    <button class="btn btn-secondary" (click)="cargarMonitor()" [disabled]="!politicaSeleccionadaId">
-      🔄 Actualizar
-    </button>
+    <div class="header-right">
+      <ng-container *ngIf="monitor">
+        <span class="stat-chip stat-activos">{{ activos }} activo{{ activos !== 1 ? 's' : '' }}</span>
+        <span class="stat-chip stat-completados">{{ completados }} completado{{ completados !== 1 ? 's' : '' }}</span>
+        <span class="stat-chip stat-rechazados">{{ rechazados }} rechazado{{ rechazados !== 1 ? 's' : '' }}</span>
+      </ng-container>
+      <button class="btn btn-secondary" (click)="cargarMonitor()" [disabled]="!politicaSeleccionadaId">
+        Actualizar
+      </button>
+    </div>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
@@ -15,6 +26,7 @@
     <p>Cargando monitor...</p>
   </div>
 
+  <!-- Selector de política -->
   <section class="selector-panel" *ngIf="politicas.length > 0">
     <label for="politica" class="form-label">Política activa</label>
     <select id="politica" class="form-input" [value]="politicaSeleccionadaId" (change)="onPoliticaChange($event)">
@@ -23,65 +35,55 @@
   </section>
 
   <ng-container *ngIf="monitor">
-    <!-- Stats bar -->
-    <section class="stats-bar">
-      <div class="stat-card stat-activos">
-        <span class="stat-value">{{ totalActivos }}</span>
-        <span class="stat-label">Activos</span>
-      </div>
-      <div class="stat-card stat-completados">
-        <span class="stat-value">{{ monitor.tramitesCompletados }}</span>
-        <span class="stat-label">Completados</span>
-      </div>
-      <div class="stat-card stat-rechazados">
-        <span class="stat-value">{{ monitor.tramitesRechazados }}</span>
-        <span class="stat-label">Rechazados</span>
-      </div>
-      <div class="stat-card stat-politica" *ngIf="monitor.nombrePolitica">
-        <span class="stat-label">Política</span>
-        <span class="stat-politica-nombre">{{ monitor.nombrePolitica }}</span>
-      </div>
-    </section>
 
-    <!-- Lanes por departamento -->
-    <div class="monitor-lanes" *ngIf="nodosAgrupados.length > 0">
-      <div class="lane" *ngFor="let grupo of nodosAgrupados">
-        <div class="lane-header">{{ grupo.departamento }}</div>
-        <div class="lane-body">
-          <div
-            class="nodo-card"
-            *ngFor="let nodo of grupo.nodos"
-            [style.border-left-color]="colorHex[nodo.color]"
-            [title]="getTooltip(nodo)"
-          >
-            <div class="nodo-dot" [style.background]="colorHex[nodo.color]"></div>
-            <div class="nodo-info">
-              <span class="nodo-nombre">{{ nodo.nombreNodo }}</span>
-              <span class="nodo-tipo-label">{{ nodo.tipo }}</span>
-            </div>
-            <div class="nodo-tramites-count" *ngIf="nodo.tramitesActivos.length > 0">
-              <span class="count-badge" [style.background]="colorHex[nodo.color]">
-                {{ nodo.tramitesActivos.length }}
-              </span>
+    <!-- Grid de departamentos -->
+    <div class="deptos-grid" *ngIf="monitor.departamentos?.length">
+      <div
+        class="depto-card"
+        [ngClass]="getDeptoClass(depto)"
+        *ngFor="let depto of monitor.departamentos"
+      >
+        <div class="depto-header">
+          <span class="depto-nombre">{{ depto.nombreDepartamento }}</span>
+          <span class="depto-count" *ngIf="depto.nodosActivos && depto.nodosActivos.length > 0">
+            {{ depto.nodosActivos.length }} nodo{{ depto.nodosActivos.length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+
+        <!-- Nodos activos con sub-cards de trámites -->
+        <div class="nodos-activos" *ngIf="depto.nodosActivos && depto.nodosActivos.length > 0">
+          <div class="nodo-activo" *ngFor="let nodo of depto.nodosActivos">
+            <div class="nodo-nombre-label">{{ nodo.nombreNodo }}</div>
+            <div class="tramite-subcard" *ngFor="let tram of nodo.tramitesActivos">
+              <div class="subcard-top">
+                <span class="prioridad-chip" [ngClass]="getPrioridadClass(tram.prioridad)">
+                  {{ tram.prioridad }}
+                </span>
+                <span class="tram-titulo">{{ tram.titulo }}</span>
+              </div>
+              <div class="subcard-meta">
+                <span class="func-nombre">{{ tram.funcionarioNombre }}</span>
+                <span class="tiempo-chip">{{ tram.tiempoTranscurrido }}</span>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Vacío -->
+        <div class="depto-vacio" *ngIf="!depto.nodosActivos?.length">
+          Sin actividad activa
         </div>
       </div>
     </div>
 
-    <!-- Tramites activos -->
-    <div class="tramites-section" *ngIf="monitor.tramitesActivos.length > 0">
-      <h3 class="section-title">Trámites activos</h3>
+    <!-- Lista de trámites activos -->
+    <div class="tramites-section" *ngIf="monitor.tramitesActivos && monitor.tramitesActivos.length > 0">
+      <h3 class="section-title">Tramites activos</h3>
       <div class="tramite-row" *ngFor="let t of monitor.tramitesActivos">
-        <span class="prioridad-chip" [ngClass]="getPrioridadClass(t.prioridad)">
-          {{ t.prioridad || 'MEDIA' }}
-        </span>
-        <span class="tramite-titulo">{{ t.titulo }}</span>
-        <span class="tramite-depto" *ngIf="t.departamentoActualNombre">
-          → {{ t.departamentoActualNombre }}
-        </span>
-        <span class="tramite-nodo" *ngIf="t.nodoActualNombre && !t.departamentoActualNombre">
-          → {{ t.nodoActualNombre }}
+        <span class="prioridad-chip" [ngClass]="getPrioridadClass(t.prioridad)">{{ t.prioridad }}</span>
+        <span class="tramite-titulo-texto">{{ t.titulo }}</span>
+        <span class="tramite-depto-texto" *ngIf="t.departamentoActualNombre">
+          en: {{ t.departamentoActualNombre }}
         </span>
       </div>
     </div>
@@ -90,9 +92,10 @@
     <div class="sockets-panel" *ngIf="eventosRecientes.length > 0">
       <h3>Eventos recientes</h3>
       <div class="alerta" *ngFor="let e of eventosRecientes">
-        <span class="badge">{{ e.tipo }}</span>
+        <span class="event-badge">{{ e.tipo }}</span>
         {{ e.tramiteId | slice:0:8 }}...
       </div>
     </div>
+
   </ng-container>
 </div>

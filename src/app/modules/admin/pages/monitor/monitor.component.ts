@@ -5,7 +5,7 @@ import { ApiResponse } from '../../../../core/models/api-response.model';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
 import { SocketService } from '../../../../core/services/socket.service';
 import {
-  MonitorNodoEstado,
+  MonitorDepartamento,
   MonitorPoliticaResponse,
   TramiteService
 } from '../../../../core/services/tramite.service';
@@ -28,12 +28,10 @@ export class MonitorComponent implements OnInit, OnDestroy {
 
   private monitorSubscription?: Subscription;
 
-  readonly colorHex: Record<string, string> = {
-    VERDE: '#6bd968',
+  readonly colorBorder: Record<string, string> = {
     AMARILLO: '#fecc1b',
-    ROJO: '#f44250',
-    NARANJA: '#ff9800',
-    GRIS: '#9D9D60'
+    ROJO:     '#f44250',
+    VACIO:    '#565620'
   };
 
   constructor(
@@ -64,10 +62,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.cargando = true;
     this.politicaService
       .listar()
-      .pipe(
-        timeout(15000),
-        finalize(() => (this.cargando = false))
-      )
+      .pipe(timeout(15000), finalize(() => (this.cargando = false)))
       .subscribe({
         next: (res: ApiResponse<Politica[]>) => {
           this.politicas = (res.data ?? []).filter((p) => p.estado === 'ACTIVA');
@@ -84,17 +79,12 @@ export class MonitorComponent implements OnInit, OnDestroy {
   }
 
   cargarMonitor(): void {
-    if (!this.politicaSeleccionadaId) {
-      return;
-    }
+    if (!this.politicaSeleccionadaId) return;
 
     this.cargando = true;
     this.tramiteService
       .obtenerMonitor(this.politicaSeleccionadaId)
-      .pipe(
-        timeout(15000),
-        finalize(() => (this.cargando = false))
-      )
+      .pipe(timeout(15000), finalize(() => (this.cargando = false)))
       .subscribe({
         next: (res) => {
           this.monitor = res.data ?? null;
@@ -106,18 +96,14 @@ export class MonitorComponent implements OnInit, OnDestroy {
   }
 
   private suscribirEventos(): void {
-    if (!this.politicaSeleccionadaId) {
-      return;
-    }
+    if (!this.politicaSeleccionadaId) return;
 
     this.monitorSubscription?.unsubscribe();
     this.monitorSubscription = this.socketService
       .suscribirAMonitor(this.politicaSeleccionadaId)
       .subscribe((evento) => {
         this.eventosRecientes.unshift(evento);
-        if (this.eventosRecientes.length > 8) {
-          this.eventosRecientes.pop();
-        }
+        if (this.eventosRecientes.length > 8) this.eventosRecientes.pop();
         this.manejarEventoSocket(evento);
         this.cargarMonitor();
       });
@@ -126,71 +112,50 @@ export class MonitorComponent implements OnInit, OnDestroy {
   private manejarEventoSocket(evento: any): void {
     if (!this.monitor) return;
     switch (evento.tipo) {
-      case 'NODO_COMPLETADO':
-        this.actualizarColorNodo(evento.nodoAnteriorId, 'VERDE');
-        this.actualizarColorNodo(evento.nodoActualId, 'AMARILLO');
-        break;
       case 'TRAMITE_COMPLETADO':
-        this.monitor.tramitesCompletados = (this.monitor.tramitesCompletados || 0) + 1;
+        if (this.monitor.estadisticas) {
+          this.monitor.estadisticas.activos = Math.max(0, this.monitor.estadisticas.activos - 1);
+          this.monitor.estadisticas.completados++;
+        }
         break;
       case 'TRAMITE_RECHAZADO':
-        this.actualizarColorNodo(evento.nodoActualId, 'ROJO');
-        this.monitor.tramitesRechazados = (this.monitor.tramitesRechazados || 0) + 1;
+        if (this.monitor.estadisticas) {
+          this.monitor.estadisticas.activos = Math.max(0, this.monitor.estadisticas.activos - 1);
+          this.monitor.estadisticas.rechazados++;
+        }
         break;
       case 'TRAMITE_INICIADO':
-        this.actualizarColorNodo(evento.nodoActualId, 'AMARILLO');
+        if (this.monitor.estadisticas) {
+          this.monitor.estadisticas.activos++;
+        }
         break;
     }
   }
 
-  private actualizarColorNodo(nodoId: string, color: MonitorNodoEstado['color']): void {
-    if (!this.monitor || !nodoId) return;
-    const nodo = this.monitor.nodos.find(n => n.nodoId === nodoId);
-    if (nodo) {
-      nodo.color = color;
-    }
-  }
-
-  get nodosAgrupados(): { departamento: string; nodos: MonitorNodoEstado[] }[] {
-    if (!this.monitor?.nodos) return [];
-
-    const grupos = new Map<string, MonitorNodoEstado[]>();
-    const nodosVisibles = this.monitor.nodos.filter(n =>
-      n.tipo !== 'INICIO' && n.tipo !== 'FIN' && n.tipo !== 'PARALELO'
-    );
-
-    for (const nodo of nodosVisibles) {
-      const depto = nodo.nombreDepartamento || 'Sin departamento';
-      if (!grupos.has(depto)) {
-        grupos.set(depto, []);
-      }
-      grupos.get(depto)!.push(nodo);
-    }
-
-    return Array.from(grupos.entries()).map(([departamento, nodos]) => ({
-      departamento,
-      nodos
-    }));
-  }
-
-  getTooltip(nodo: MonitorNodoEstado): string {
-    if (!nodo.tramitesActivos?.length) return nodo.nombreNodo || '';
-    const lista = nodo.tramitesActivos
-      .map(t => `${t.titulo} (${t.prioridad})`)
-      .join('\n');
-    return `${nodo.nombreNodo}\n${nodo.tramitesActivos.length} activo(s):\n${lista}`;
+  getDeptoClass(depto: MonitorDepartamento): string {
+    if (depto.color === 'ROJO') return 'tiene-rechazado';
+    if (depto.color === 'AMARILLO') return 'tiene-activos';
+    return 'vacio';
   }
 
   getPrioridadClass(prioridad: string): string {
     switch (prioridad) {
-      case 'ALTA': return 'chip-alta';
+      case 'ALTA':  return 'chip-alta';
       case 'MEDIA': return 'chip-media';
-      case 'BAJA': return 'chip-baja';
-      default: return 'chip-media';
+      case 'BAJA':  return 'chip-baja';
+      default:      return 'chip-media';
     }
   }
 
-  get totalActivos(): number {
-    return this.monitor?.tramitesActivos?.length ?? 0;
+  get activos(): number {
+    return this.monitor?.estadisticas?.activos ?? 0;
+  }
+
+  get completados(): number {
+    return this.monitor?.estadisticas?.completados ?? 0;
+  }
+
+  get rechazados(): number {
+    return this.monitor?.estadisticas?.rechazados ?? 0;
   }
 }

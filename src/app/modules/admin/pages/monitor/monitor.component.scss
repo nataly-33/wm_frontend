@@ -1,195 +1,209 @@
+// ─── Header ───────────────────────────────────────────────────────────────────
+.monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+
+  .header-left {
+    .page-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin: 0;
+      letter-spacing: -0.4px;
+    }
+    .politica-nombre {
+      color: var(--primary-200);
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+// ─── Stats chips (compactos, en línea) ───────────────────────────────────────
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.stat-activos {
+    background: rgba(254, 204, 27, 0.15);
+    color: #fecc1b;
+    border: 1px solid rgba(254, 204, 27, 0.3);
+  }
+  &.stat-completados {
+    background: rgba(107, 217, 104, 0.15);
+    color: #6bd968;
+    border: 1px solid rgba(107, 217, 104, 0.3);
+  }
+  &.stat-rechazados {
+    background: rgba(244, 66, 80, 0.15);
+    color: #f44250;
+    border: 1px solid rgba(244, 66, 80, 0.3);
+  }
+}
+
+// ─── Selector ────────────────────────────────────────────────────────────────
 .selector-panel {
   max-width: 420px;
   margin-bottom: 1.5rem;
 }
 
-// ─── Stats bar ───────────────────────────────────────
-.stats-bar {
-  display: flex;
-  gap: 0.75rem;
+// ─── Grid de departamentos ───────────────────────────────────────────────────
+.deptos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
+  align-items: start;
 }
 
-.stat-card {
+// ─── Card de departamento ─────────────────────────────────────────────────────
+.depto-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-left: 4px solid #565620;
   border-radius: 10px;
-  padding: 14px 20px;
-  min-width: 110px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  padding: 16px;
+  min-height: 120px;
+  transition: border-left-color 0.3s ease;
 
-  .stat-value {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1;
+  &.tiene-activos {
+    border-left-color: #fecc1b;
   }
+  &.tiene-rechazado {
+    border-left-color: #f44250;
+  }
+  &.vacio {
+    border-left-color: #565620;
+    opacity: 0.75;
+  }
+}
 
-  .stat-label {
-    font-size: 11px;
-    color: var(--text-muted);
+.depto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  .depto-nombre {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-200);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
-  .stat-politica-nombre {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary-100);
+  .depto-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(157, 157, 96, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
   }
-
-  &.stat-activos { border-top: 3px solid #fecc1b; }
-  &.stat-completados { border-top: 3px solid #6bd968; }
-  &.stat-rechazados { border-top: 3px solid #f44250; }
-  &.stat-politica { min-width: 200px; }
 }
 
-// ─── Lanes / Carriles ────────────────────────────────
-.monitor-lanes {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1.5rem;
-  align-items: flex-start;
-}
-
-.lane {
-  flex: 0 0 220px;
-  min-width: 220px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.lane-header {
-  background: rgba(157, 157, 96, 0.1);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary-200);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.lane-body {
+// ─── Nodo activo dentro de la card ───────────────────────────────────────────
+.nodos-activos {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: 10px;
 }
 
-// ─── Nodo Card ───────────────────────────────────────
-.nodo-card {
+.nodo-activo {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nodo-nombre-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+// ─── Sub-card de trámite dentro del nodo ─────────────────────────────────────
+.tramite-subcard {
   background: var(--bg-dark);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  cursor: default;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeInCard 0.25s ease;
 }
 
-.nodo-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+@keyframes fadeInCard {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.nodo-info {
-  flex: 1;
-  overflow: hidden;
+.subcard-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
-  .nodo-nombre {
-    display: block;
+  .tram-titulo {
     font-size: 12px;
     font-weight: 600;
     color: var(--text-primary);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.subcard-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  .func-nombre {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .nodo-tipo-label {
-    display: block;
+  .tiempo-chip {
     font-size: 10px;
     color: var(--text-muted);
-    text-transform: uppercase;
+    background: rgba(157, 157, 96, 0.1);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
   }
 }
 
-.nodo-tramites-count {
-  .count-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    font-size: 11px;
-    font-weight: 700;
-    color: #111;
-    flex-shrink: 0;
-  }
-}
-
-// ─── Tramites activos ─────────────────────────────────
-.tramites-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tramite-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-
-  &:last-child { border-bottom: none; }
-}
-
-.tramite-titulo {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.tramite-depto,
-.tramite-nodo {
+// ─── Estado vacío de la card ──────────────────────────────────────────────────
+.depto-vacio {
   font-size: 12px;
   color: var(--text-muted);
-  white-space: nowrap;
+  text-align: center;
+  padding: 20px 0 8px;
+  font-style: italic;
 }
 
-// ─── Prioridad chips ──────────────────────────────────
+// ─── Chips de prioridad ───────────────────────────────────────────────────────
 .prioridad-chip {
   display: inline-flex;
   align-items: center;
@@ -202,35 +216,66 @@
   white-space: nowrap;
   flex-shrink: 0;
 
-  &.chip-alta {
-    background: rgba(244, 66, 80, 0.2);
-    color: #f44250;
+  &.chip-alta  { background: rgba(244, 66, 80, 0.2);  color: #f44250; }
+  &.chip-media { background: rgba(254, 204, 27, 0.2); color: #fecc1b; }
+  &.chip-baja  { background: rgba(107, 217, 104, 0.2); color: #6bd968; }
+}
+
+// ─── Sección tramites activos ─────────────────────────────────────────────────
+.tramites-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.tramite-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child { border-bottom: none; }
+
+  .tramite-titulo-texto {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
   }
-  &.chip-media {
-    background: rgba(254, 204, 27, 0.2);
-    color: #fecc1b;
-  }
-  &.chip-baja {
-    background: rgba(107, 217, 104, 0.2);
-    color: #6bd968;
+
+  .tramite-depto-texto {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
   }
 }
 
-// ─── Eventos WebSocket ────────────────────────────────
+// ─── Eventos WebSocket ────────────────────────────────────────────────────────
 .sockets-panel {
-  margin-top: 1rem;
   background: var(--bg-card);
-  color: var(--text-primary);
-  padding: 1rem;
-  border-radius: 8px;
   border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
 
   h3 {
-    margin-bottom: 0.75rem;
-    font-size: 13px;
-    color: var(--primary-100);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
   }
 
   .alerta {
@@ -241,13 +286,14 @@
     &:last-child { border-bottom: none; }
   }
 
-  .badge {
+  .event-badge {
+    display: inline-flex;
     padding: 2px 8px;
     border-radius: 4px;
-    font-size: 11px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 700;
     margin-right: 6px;
-    background: rgba(157, 157, 96, 0.2);
+    background: rgba(157, 157, 96, 0.15);
     color: var(--primary-200);
   }
 }
