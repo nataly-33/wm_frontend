@@ -1,9 +1,14 @@
+<app-navbar [userName]="userName"></app-navbar>
+
 <div class="page-container">
   <div class="page-header">
     <div>
       <h1 class="page-title">Mis Tareas</h1>
       <p class="page-subtitle">Tareas asignadas a tu usuario</p>
     </div>
+    <button class="btn btn-secondary" (click)="cargarTareas()">
+      🔄 Actualizar
+    </button>
   </div>
 
   <div *ngIf="cargando" class="loading-state">
@@ -11,23 +16,52 @@
     <p>Cargando tareas...</p>
   </div>
 
-  <div *ngIf="error" class="alert alert-error">
+  <div *ngIf="error && !cargando" class="alert alert-error">
     <span>{{ error }}</span>
   </div>
 
-  <div *ngIf="!cargando && tareas.length === 0" class="empty-state">
+  <div *ngIf="!cargando && tareas.length === 0 && !error" class="empty-state">
+    <div class="empty-icon">✅</div>
     <h3>No hay tareas pendientes</h3>
     <p>¡Buen trabajo! Todo está al día.</p>
   </div>
 
   <div *ngIf="!cargando && tareas.length > 0" class="tareas-list">
     <div *ngFor="let tarea of tareas" class="tarea-card">
-      <div class="tarea-info">
-        <h3>ID Tarea: {{ tarea.id | slice:0:8 }}...</h3>
-        <p>Iniciada: {{ tarea.iniciadoEn | date:'short' }}</p>
+      <div class="tarea-header">
+        <span class="prioridad-chip" [ngClass]="getPrioridadClass(tarea.prioridad)">
+          {{ tarea.prioridad || 'MEDIA' }}
+        </span>
+        <span class="nodo-nombre">{{ tarea.nombreNodo }}</span>
+        <span class="estado-badge" [ngClass]="getEstadoClass(tarea.estado)">
+          {{ tarea.estado === 'EN_PROCESO' ? 'En proceso' : 'Pendiente' }}
+        </span>
       </div>
+
+      <div class="tarea-body">
+        <div class="tarea-info-row">
+          <span class="info-icon">📋</span>
+          <span class="info-text tramite-titulo">{{ tarea.tituloTramite }}</span>
+        </div>
+        <div class="tarea-info-row">
+          <span class="info-icon">🏢</span>
+          <span class="info-text">{{ tarea.nombreDepartamento }}</span>
+        </div>
+        <div class="tarea-info-row" *ngIf="tarea.nombrePolitica">
+          <span class="info-icon">📁</span>
+          <span class="info-text politica-nombre">{{ tarea.nombrePolitica }}</span>
+        </div>
+        <div class="tarea-meta">
+          <span *ngIf="tarea.fechaLimite" class="fecha-vence">
+            📅 Vence: {{ formatFecha(tarea.fechaLimite) }}
+          </span>
+        </div>
+      </div>
+
       <div class="tarea-actions">
-        <a [routerLink]="['/funcionario/ejecutar-tarea', tarea.id]" class="btn btn-primary">Ejecutar</a>
+        <a [routerLink]="['/funcionario/ejecutar-tarea', tarea.id]" class="btn btn-primary">
+          ▶ Ejecutar
+        </a>
       </div>
     </div>
   </div>
