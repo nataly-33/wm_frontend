@@ -5,11 +5,13 @@ import { FormsModule } from '@angular/forms';
 import { finalize, timeout } from 'rxjs';
 import { EjecucionService, EjecucionNodo } from '../../../../core/services/ejecucion.service';
 import { Formulario, FormularioCampo, FormularioService } from '../../../../core/services/formulario.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { NavbarComponent } from '../../../../shared/components/navbar/navbar.component';
 
 @Component({
   selector: 'app-ejecutar-tarea',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, NavbarComponent],
   templateUrl: './ejecutar-tarea.component.html',
   styleUrls: ['./ejecutar-tarea.component.scss']
 })
@@ -24,15 +26,19 @@ export class EjecutarTareaComponent implements OnInit {
   cargandoFormulario = false;
   guardando = false;
   error: string | null = null;
+  userName = '';
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private ejecucionService: EjecucionService,
-    private formularioService: FormularioService
+    private formularioService: FormularioService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    const user = this.authService.getCurrentUser();
+    if (user) this.userName = user.nombre;
     this.tareaId = this.route.snapshot.paramMap.get('id');
     if (this.tareaId) {
       this.cargarTarea(this.tareaId);
