@@ -1,8 +1,8 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="page-title">Trámites</h1>
-      <p class="page-subtitle">Todos los trámites de la empresa</p>
+      <h1 class="page-title">Tramites</h1>
+      <p class="page-subtitle">Todos los tramites de la empresa, ordenados por estado</p>
     </div>
   </div>
 
@@ -10,20 +10,104 @@
 
   <div *ngIf="cargando" class="loading-state">
     <div class="spinner"></div>
-    <p>Cargando trámites...</p>
+    <p>Cargando tramites...</p>
   </div>
 
-  <div *ngIf="!cargando && tramites.length === 0" class="empty-state">
-    <h3>Sin trámites</h3>
-    <p>No hay trámites registrados por ahora.</p>
+  <div *ngIf="!cargando && tramites.length === 0 && !error" class="empty-state">
+    <h3>Sin tramites</h3>
+    <p>No hay tramites registrados.</p>
   </div>
 
-  <section class="tramites-grid" *ngIf="!cargando && tramites.length > 0">
+  <div class="tramites-list" *ngIf="!cargando && tramites.length > 0">
     <article class="tramite-card" *ngFor="let t of tramites">
-      <h3>{{ t.titulo }}</h3>
-      <p class="meta">Estado: <strong>{{ t.estadoGeneral }}</strong></p>
-      <p class="meta">Prioridad: <strong>{{ t.prioridad }}</strong></p>
-      <p class="meta">Inicio: {{ t.iniciadoEn | date: 'short' }}</p>
+
+      <!-- Fila superior: estado + prioridad -->
+      <div class="card-top">
+        <span class="estado-badge" [ngClass]="getEstadoClass(t.estadoGeneral)">
+          {{ t.estadoGeneral | titlecase }}
+        </span>
+        <span class="prioridad-badge" [ngClass]="getPrioridadClass(t.prioridad)">
+          {{ t.prioridad }}
+        </span>
+      </div>
+
+      <!-- Título del trámite -->
+      <h3 class="card-titulo">{{ t.titulo }}</h3>
+
+      <!-- Política -->
+      <div class="card-row" *ngIf="t.nombrePolitica">
+        <span class="row-label">Politica</span>
+        <span class="row-value">{{ t.nombrePolitica }}</span>
+      </div>
+
+      <!-- EN_PROCESO / PENDIENTE: info del nodo actual -->
+      <ng-container *ngIf="t.estadoGeneral === 'EN_PROCESO' || t.estadoGeneral === 'PENDIENTE'">
+        <div class="card-row" *ngIf="t.nodoActualNombre">
+          <span class="row-label">Nodo actual</span>
+          <span class="row-value">{{ t.nodoActualNombre }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.departamentoActualNombre">
+          <span class="row-label">Departamento</span>
+          <span class="row-value">{{ t.departamentoActualNombre }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.funcionarioActualNombre">
+          <span class="row-label">Asignado a</span>
+          <span class="row-value">{{ t.funcionarioActualNombre }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.iniciadoEn">
+          <span class="row-label">Iniciado</span>
+          <span class="row-value">{{ formatFecha(t.iniciadoEn) }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.tiempoTranscurrido">
+          <span class="row-label">Tiempo</span>
+          <span class="row-value tiempo">{{ t.tiempoTranscurrido }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.fechaLimite">
+          <span class="row-label">Vence</span>
+          <span class="row-value" [class.vencido]="estaVencido(t.fechaLimite)">
+            {{ formatFechaSolo(t.fechaLimite) }}
+          </span>
+        </div>
+      </ng-container>
+
+      <!-- COMPLETADO -->
+      <ng-container *ngIf="t.estadoGeneral === 'COMPLETADO'">
+        <div class="card-row" *ngIf="t.finalizadoEn">
+          <span class="row-label">Completado</span>
+          <span class="row-value">{{ formatFecha(t.finalizadoEn) }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.duracionTotal">
+          <span class="row-label">Duracion</span>
+          <span class="row-value">{{ t.duracionTotal }}</span>
+        </div>
+      </ng-container>
+
+      <!-- RECHAZADO -->
+      <ng-container *ngIf="t.estadoGeneral === 'RECHAZADO'">
+        <div class="card-row" *ngIf="t.nodoRechazoNombre">
+          <span class="row-label">Rechazado en</span>
+          <span class="row-value">
+            {{ t.nodoRechazoNombre }}
+            <span *ngIf="t.departamentoRechazoNombre"> ({{ t.departamentoRechazoNombre }})</span>
+          </span>
+        </div>
+        <div class="card-row" *ngIf="t.motivoRechazo">
+          <span class="row-label">Motivo</span>
+          <span class="row-value motivo-rechazo">{{ t.motivoRechazo }}</span>
+        </div>
+        <div class="card-row" *ngIf="t.finalizadoEn">
+          <span class="row-label">Fecha</span>
+          <span class="row-value">{{ formatFecha(t.finalizadoEn) }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Acciones -->
+      <div class="card-footer">
+        <a class="btn btn-secondary btn-sm" [routerLink]="['/admin/tramites', t.id]">
+          Ver detalle
+        </a>
+      </div>
+
     </article>
-  </section>
+  </div>
 </div>

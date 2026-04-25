@@ -1,24 +1,114 @@
-.tramites-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+// ─── Lista de trámites ────────────────────────────────────────────────────────
+.tramites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
+// ─── Card ─────────────────────────────────────────────────────────────────────
 .tramite-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 
-  h3 {
-    margin: 0 0 8px;
-    font-size: 16px;
-    color: var(--text-primary);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   }
+}
 
-  .meta {
-    margin: 0;
+// ─── Fila superior ────────────────────────────────────────────────────────────
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+// ─── Badges estado ────────────────────────────────────────────────────────────
+.estado-badge,
+.prioridad-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.badge-en-proceso  { background: rgba(254, 204, 27, 0.2);  color: #fecc1b; }
+.badge-pendiente   { background: rgba(57, 146, 255, 0.2);  color: #3992ff; }
+.badge-completado  { background: rgba(107, 217, 104, 0.2); color: #6bd968; }
+.badge-rechazado   { background: rgba(244, 66, 80, 0.2);   color: #f44250; }
+.badge-bloqueado   { background: rgba(255, 152, 0, 0.2);   color: #ff9800; }
+.badge-alta        { background: rgba(244, 66, 80, 0.2);   color: #f44250; }
+.badge-media       { background: rgba(254, 204, 27, 0.2);  color: #fecc1b; }
+.badge-baja        { background: rgba(107, 217, 104, 0.2); color: #6bd968; }
+
+// ─── Filas de información ─────────────────────────────────────────────────────
+.card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+
+  .row-label {
+    font-size: 11px;
+    font-weight: 600;
     color: var(--text-muted);
-    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    min-width: 90px;
+    flex-shrink: 0;
   }
+
+  .row-value {
+    color: var(--text-primary);
+    font-size: 13px;
+    flex: 1;
+
+    &.tiempo {
+      color: var(--primary-200);
+      font-weight: 500;
+    }
+
+    &.vencido {
+      color: #f44250;
+      font-weight: 600;
+    }
+
+    &.motivo-rechazo {
+      color: #ff7b86;
+      font-style: italic;
+    }
+  }
+}
+
+// ─── Footer con acciones ──────────────────────────────────────────────────────
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
 }
