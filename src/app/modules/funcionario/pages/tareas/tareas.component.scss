@@ -4,6 +4,16 @@
   margin: 0 auto;
 }
 
+// ─── Estado vacío ────────────────────────────────────
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(157, 157, 96, 0.1);
+  border: 2px solid rgba(157, 157, 96, 0.2);
+  margin: 0 auto 16px;
+}
+
 // ─── Lista de tareas ──────────────────────────────────
 .tareas-list {
   display: flex;
@@ -110,8 +120,13 @@
   font-size: 13px;
   color: var(--text-muted);
 
-  .info-icon {
-    font-size: 14px;
+  .info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
     flex-shrink: 0;
   }
 
