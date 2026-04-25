@@ -69,6 +69,13 @@ export const routes: Routes = [
           import('./modules/admin/pages/tramites/tramites.component').then(
             (m) => m.TramitesComponent
           )
+      },
+      {
+        path: 'tramites/:id',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/tramite-detalle/tramite-detalle.component').then(
+            (m) => m.TramiteDetalleComponent
+          )
       }
     ]
   },

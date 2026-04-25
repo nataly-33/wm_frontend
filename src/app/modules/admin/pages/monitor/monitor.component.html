@@ -90,10 +90,21 @@
 
     <!-- Eventos WebSocket recientes -->
     <div class="sockets-panel" *ngIf="eventosRecientes.length > 0">
-      <h3>Eventos recientes</h3>
-      <div class="alerta" *ngFor="let e of eventosRecientes">
-        <span class="event-badge">{{ e.tipo }}</span>
-        {{ e.tramiteId | slice:0:8 }}...
+      <h3 class="section-title">Eventos recientes</h3>
+      <div class="alerta"
+           *ngFor="let e of eventosRecientes"
+           [ngClass]="{'alerta-completado': e.tipo === 'TRAMITE_COMPLETADO', 'alerta-rechazado': e.tipo === 'TRAMITE_RECHAZADO'}">
+        <span class="event-badge">{{ e.tipo | titlecase }}</span>
+        <span class="event-desc">
+          <ng-container *ngIf="e.titulo">{{ e.titulo }}</ng-container>
+          <ng-container *ngIf="!e.titulo && e.tramiteId">tramite {{ e.tramiteId | slice:0:8 }}...</ng-container>
+        </span>
+        <span class="event-sub" *ngIf="e.tipo === 'NODO_COMPLETADO' && e.estado">
+          → {{ e.estado }}
+        </span>
+        <span class="event-sub" *ngIf="e.tipo === 'TRAMITE_RECHAZADO' && e.observaciones">
+          — {{ e.observaciones | slice:0:40 }}
+        </span>
       </div>
     </div>
 

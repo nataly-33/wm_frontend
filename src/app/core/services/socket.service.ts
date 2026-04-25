@@ -22,7 +22,7 @@ export class SocketService {
   }
 
   private conectar(): void {
-    const token = this.authService.getToken(); 
+    const token = this.authService.getToken();
     if (!token) return;
 
     this.client = new Client({
@@ -36,13 +36,57 @@ export class SocketService {
     });
 
     this.client.onConnect = () => {
+      console.log('WebSocket conectado');
       const user = this.authService.getCurrentUser();
       if (user) {
-        // Suscribirse a notificaciones personales
         this.client.subscribe(`/topic/usuario/${user.id}`, (message: Message) => {
           this.notificacionesSubject.next(JSON.parse(message.body));
         });
       }
+
+      // Suscribir todos los topics de monitor pendientes
+      for (const [politicaId, subject] of this.monitorSubjects.entries()) {
+        const topic = `/topic/politica/${politicaId}`;
+        if (!this.monitorSubscriptions.has(topic)) {
+          this.client.subscribe(topic, (message: Message) => {
+            console.log(`Evento WebSocket monitor recibido [politica=${politicaId}]:`, message.body);
+            subject.next(JSON.parse(message.body));
+          });
+          this.monitorSubscriptions.add(topic);
+        }
+      }
+
+      // Suscribir todos los topics de formularios empresa pendientes
+      for (const [empresaId, subject] of this.formulariosEmpresaSubjects.entries()) {
+        const topic = `/topic/empresa/${empresaId}/formularios`;
+        if (!this.formulariosSubscriptions.has(topic)) {
+          this.client.subscribe(topic, (message: Message) => {
+            subject.next(JSON.parse(message.body));
+          });
+          this.formulariosSubscriptions.add(topic);
+        }
+      }
+
+      // Suscribir todos los topics de formularios departamento pendientes
+      for (const [deptoId, subject] of this.formulariosDeptoSubjects.entries()) {
+        const topic = `/topic/departamento/${deptoId}/formularios`;
+        if (!this.formulariosSubscriptions.has(topic)) {
+          this.client.subscribe(topic, (message: Message) => {
+            subject.next(JSON.parse(message.body));
+          });
+          this.formulariosSubscriptions.add(topic);
+        }
+      }
+    };
+
+    this.client.onDisconnect = () => {
+      console.log('WebSocket desconectado');
+      this.monitorSubscriptions.clear();
+      this.formulariosSubscriptions.clear();
+    };
+
+    this.client.onStompError = (frame) => {
+      console.error('Error STOMP:', frame);
     };
 
     this.client.activate();
@@ -56,22 +100,14 @@ export class SocketService {
     const monitorSubject = this.monitorSubjects.get(politicaId)!;
     const topic = `/topic/politica/${politicaId}`;
 
-    const intentarSuscripcion = () => {
-      if (this.client && this.client.connected && !this.monitorSubscriptions.has(topic)) {
-        this.client.subscribe(topic, (message: Message) => {
-          monitorSubject.next(JSON.parse(message.body));
-        });
-        this.monitorSubscriptions.add(topic);
-      }
-    };
-
-    if (this.client && this.client.connected) {
-      intentarSuscripcion();
-    } else {
-      setTimeout(() => {
-        intentarSuscripcion();
-      }, 2000);
+    if (this.client && this.client.connected && !this.monitorSubscriptions.has(topic)) {
+      this.client.subscribe(topic, (message: Message) => {
+        console.log(`Evento WebSocket monitor recibido [politica=${politicaId}]:`, message.body);
+        monitorSubject.next(JSON.parse(message.body));
+      });
+      this.monitorSubscriptions.add(topic);
     }
+    // Si no está conectado, el subject ya está en monitorSubjects y se suscribirá en onConnect
 
     return monitorSubject.asObservable();
   }
@@ -88,19 +124,11 @@ export class SocketService {
     const subject = this.formulariosEmpresaSubjects.get(empresaId)!;
     const topic = `/topic/empresa/${empresaId}/formularios`;
 
-    const intentarSuscripcion = () => {
-      if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
-        this.client.subscribe(topic, (message: Message) => {
-          subject.next(JSON.parse(message.body));
-        });
-        this.formulariosSubscriptions.add(topic);
-      }
-    };
-
-    if (this.client && this.client.connected) {
-      intentarSuscripcion();
-    } else {
-      setTimeout(() => intentarSuscripcion(), 2000);
+    if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
+      this.client.subscribe(topic, (message: Message) => {
+        subject.next(JSON.parse(message.body));
+      });
+      this.formulariosSubscriptions.add(topic);
     }
 
     return subject.asObservable();
@@ -114,19 +142,11 @@ export class SocketService {
     const subject = this.formulariosDeptoSubjects.get(departamentoId)!;
     const topic = `/topic/departamento/${departamentoId}/formularios`;
 
-    const intentarSuscripcion = () => {
-      if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
-        this.client.subscribe(topic, (message: Message) => {
-          subject.next(JSON.parse(message.body));
-        });
-        this.formulariosSubscriptions.add(topic);
-      }
-    };
-
-    if (this.client && this.client.connected) {
-      intentarSuscripcion();
-    } else {
-      setTimeout(() => intentarSuscripcion(), 2000);
+    if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
+      this.client.subscribe(topic, (message: Message) => {
+        subject.next(JSON.parse(message.body));
+      });
+      this.formulariosSubscriptions.add(topic);
     }
 
     return subject.asObservable();

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { Subscription, finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
@@ -37,7 +37,8 @@ export class MonitorComponent implements OnInit, OnDestroy {
   constructor(
     private politicaService: PoliticaService,
     private tramiteService: TramiteService,
-    private socketService: SocketService
+    private socketService: SocketService,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -102,10 +103,13 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.monitorSubscription = this.socketService
       .suscribirAMonitor(this.politicaSeleccionadaId)
       .subscribe((evento) => {
-        this.eventosRecientes.unshift(evento);
-        if (this.eventosRecientes.length > 8) this.eventosRecientes.pop();
-        this.manejarEventoSocket(evento);
-        this.cargarMonitor();
+        console.log('Evento WebSocket recibido en monitor:', evento);
+        this.ngZone.run(() => {
+          this.eventosRecientes.unshift(evento);
+          if (this.eventosRecientes.length > 8) this.eventosRecientes.pop();
+          this.manejarEventoSocket(evento);
+          this.cargarMonitor();
+        });
       });
   }
 

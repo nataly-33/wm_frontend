@@ -1,0 +1,109 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <a class="btn btn-secondary" routerLink="/admin/tramites">Volver</a>
+    <h1 class="page-title">Detalle del Tramite</h1>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando...</p>
+  </div>
+
+  <ng-container *ngIf="tramite && !cargando">
+
+    <!-- Cabecera del trámite -->
+    <section class="tramite-header-card">
+      <div class="th-top">
+        <span class="estado-badge" [ngClass]="getEstadoClass(tramite.estadoGeneral)">
+          {{ tramite.estadoGeneral | titlecase }}
+        </span>
+        <span class="prioridad-badge" [ngClass]="getPrioridadClass(tramite.prioridad)">
+          {{ tramite.prioridad }}
+        </span>
+      </div>
+      <h2 class="tramite-titulo">{{ tramite.titulo }}</h2>
+
+      <div class="info-grid">
+        <div class="info-row" *ngIf="tramite.nombrePolitica">
+          <span class="info-label">Politica</span>
+          <span class="info-value">{{ tramite.nombrePolitica }}</span>
+        </div>
+        <div class="info-row" *ngIf="tramite.iniciadoPorNombre">
+          <span class="info-label">Iniciado por</span>
+          <span class="info-value">{{ tramite.iniciadoPorNombre }}</span>
+        </div>
+        <div class="info-row" *ngIf="tramite.iniciadoEn">
+          <span class="info-label">Inicio</span>
+          <span class="info-value">{{ formatFecha(tramite.iniciadoEn) }}</span>
+        </div>
+        <div class="info-row" *ngIf="tramite.finalizadoEn">
+          <span class="info-label">Finalizado</span>
+          <span class="info-value">{{ formatFecha(tramite.finalizadoEn) }}</span>
+        </div>
+        <div class="info-row" *ngIf="tramite.duracionTotal">
+          <span class="info-label">Duracion total</span>
+          <span class="info-value">{{ tramite.duracionTotal }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Historial de ejecuciones -->
+    <section class="historial-section" *ngIf="historial.length > 0">
+      <h3 class="section-title">Historial de ejecuciones</h3>
+
+      <div class="timeline">
+        <div
+          class="timeline-item"
+          *ngFor="let ej of historial; let i = index"
+          [ngClass]="'estado-' + ej.estado.toLowerCase()"
+        >
+          <div class="timeline-marker">
+            <span class="step-num">{{ i + 1 }}</span>
+          </div>
+
+          <div class="timeline-card">
+            <div class="tl-top">
+              <span class="nodo-nombre">{{ ej.nodoNombre || 'Nodo ' + (i + 1) }}</span>
+              <span class="ejecucion-badge" [ngClass]="getEstadoClass(ej.estado)">
+                {{ ej.estado | titlecase }}
+              </span>
+            </div>
+
+            <div class="tl-meta">
+              <span *ngIf="ej.departamentoNombre" class="meta-chip">
+                {{ ej.departamentoNombre }}
+              </span>
+              <span *ngIf="ej.funcionarioNombre" class="meta-chip func">
+                {{ ej.funcionarioNombre }}
+              </span>
+            </div>
+
+            <div class="tl-dates">
+              <div *ngIf="ej.iniciadoEn">
+                <span class="date-label">Inicio</span>
+                <span class="date-val">{{ formatFecha(ej.iniciadoEn) }}</span>
+              </div>
+              <div *ngIf="ej.completadoEn">
+                <span class="date-label">Completado</span>
+                <span class="date-val">{{ formatFecha(ej.completadoEn) }}</span>
+              </div>
+            </div>
+
+            <div class="observaciones" *ngIf="ej.observaciones">
+              <span class="obs-label">Observaciones:</span>
+              <span class="obs-val">{{ ej.observaciones }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="empty-state" *ngIf="historial.length === 0">
+      <p>No hay ejecuciones registradas para este tramite.</p>
+    </div>
+
+  </ng-container>
+</div>
