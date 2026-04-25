@@ -2,11 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs';
 import { EjecucionService, EjecucionNodo } from '../../../../core/services/ejecucion.service';
 import { Formulario, FormularioCampo, FormularioService } from '../../../../core/services/formulario.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NavbarComponent } from '../../../../shared/components/navbar/navbar.component';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-ejecutar-tarea',
@@ -28,12 +30,16 @@ export class EjecutarTareaComponent implements OnInit {
   error: string | null = null;
   userName = '';
 
+  isUploadingMap: Record<string, boolean> = {};
+  previewMap: Record<string, string> = {};
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private ejecucionService: EjecucionService,
     private formularioService: FormularioService,
-    private authService: AuthService
+    private authService: AuthService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -126,6 +132,37 @@ export class EjecutarTareaComponent implements OnInit {
       error: () => {
         this.error = 'Error al rechazar';
         this.guardando = false;
+      }
+    });
+  }
+
+  subirArchivo(event: Event, nombreCampo: string): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const archivo = input.files[0];
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+
+    this.isUploadingMap[nombreCampo] = true;
+    this.error = null;
+
+    this.http.post<{ url: string; nombreOriginal: string; tipo: string }>(
+      `${environment.apiUrl}/api/v1/archivos/subir`,
+      formData
+    ).subscribe({
+      next: (response) => {
+        this.respuesta[nombreCampo] = response.url;
+        this.isUploadingMap[nombreCampo] = false;
+        if (archivo.type.startsWith('image/')) {
+          this.previewMap[nombreCampo] = URL.createObjectURL(archivo);
+        } else {
+          this.previewMap[nombreCampo] = archivo.name;
+        }
+      },
+      error: () => {
+        this.isUploadingMap[nombreCampo] = false;
+        this.error = 'Error al subir el archivo. Verifica el tamaño (max. 10MB).';
       }
     });
   }

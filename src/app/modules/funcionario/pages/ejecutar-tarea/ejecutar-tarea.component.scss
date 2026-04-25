@@ -42,3 +42,31 @@
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+.upload-area {
+  border: 2px dashed var(--border, #565620);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg-card, #2e2e14);
+  color: var(--text-muted, #9D9D60);
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--primary-200, #9D9D60);
+    color: var(--text-primary, #f5f5e8);
+  }
+
+  .upload-icon {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  small {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+}

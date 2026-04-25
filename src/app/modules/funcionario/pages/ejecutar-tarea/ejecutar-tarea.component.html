@@ -61,13 +61,23 @@
           <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
         </select>
 
-        <input
-          *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'"
-          type="text"
-          class="form-input"
-          [(ngModel)]="respuesta[campo.nombre]"
-          placeholder="URL del archivo"
-        />
+        <div *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'" class="upload-area" (click)="fileInput.click()">
+          <ng-container *ngIf="!previewMap[campo.nombre] && !isUploadingMap[campo.nombre]">
+            <span class="upload-icon">Seleccionar archivo</span>
+            <small>{{ campo.tipo === 'IMAGEN' ? 'Imagenes (max. 10MB)' : 'Cualquier archivo (max. 10MB)' }}</small>
+          </ng-container>
+          <img *ngIf="previewMap[campo.nombre] && campo.tipo === 'IMAGEN'"
+               [src]="previewMap[campo.nombre]"
+               style="max-height: 150px; border-radius: 4px;" />
+          <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
+            Archivo listo: {{ previewMap[campo.nombre] }}
+          </span>
+          <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
+          <input #fileInput type="file"
+                 [accept]="campo.tipo === 'IMAGEN' ? 'image/*' : '*/*'"
+                 style="display: none"
+                 (change)="subirArchivo($event, campo.nombre)" />
+        </div>
       </div>
     </ng-container>
 
