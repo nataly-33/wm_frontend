@@ -2,13 +2,12 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Formularios</h1>
-      <p class="page-subtitle">CRUD completo de formularios por política y nodo</p>
     </div>
     <button class="btn btn-primary" (click)="abrirModalCrear()">Crear formulario</button>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
-
+<!--
   <section class="panel-light" *ngIf="politicasActivas.length > 0">
     <h3>Crear por política activa</h3>
     <div class="active-policies">
@@ -17,7 +16,7 @@
         <button class="btn btn-secondary mini" (click)="abrirModalCrear(p.id)">Crear formulario</button>
       </div>
     </div>
-  </section>
+  </section> -->
 
   <div *ngIf="cargando" class="loading-state">
     <div class="spinner"></div>
@@ -48,6 +47,7 @@
       </article>
     </div>
   </section>
+
 </div>
 
 <div class="modal-overlay" *ngIf="mostrarModal">

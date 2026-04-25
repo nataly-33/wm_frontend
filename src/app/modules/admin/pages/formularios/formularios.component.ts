@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize, timeout } from 'rxjs';
+import { Subscription, finalize, timeout } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import {
   CrearFormularioRequest,
@@ -13,6 +13,7 @@ import {
 } from '../../../../core/services/formulario.service';
 import { Nodo, NodoService } from '../../../../core/services/nodo.service';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
+import { SocketService } from '../../../../core/services/socket.service';
 
 @Component({
   selector: 'app-formularios-admin',
@@ -21,7 +22,7 @@ import { Politica, PoliticaService } from '../../../../core/services/politica.se
   templateUrl: './formularios.component.html',
   styleUrls: ['./formularios.component.scss']
 })
-export class FormulariosComponent implements OnInit {
+export class FormulariosComponent implements OnInit, OnDestroy {
   grupos: FormularioEmpresaGrupo[] = [];
   gruposVista: FormulariosAgrupadosPorPolitica[] = [];
 
@@ -40,12 +41,14 @@ export class FormulariosComponent implements OnInit {
   formularioActual: Formulario | null = null;
 
   form!: FormGroup;
+  private formulariosWsSub?: Subscription;
 
   constructor(
     private authService: AuthService,
     private formularioService: FormularioService,
     private politicaService: PoliticaService,
     private nodoService: NodoService,
+    private socketService: SocketService,
     private fb: FormBuilder
   ) {}
 
@@ -67,6 +70,13 @@ export class FormulariosComponent implements OnInit {
     this.empresaId = user.empresaId;
     this.cargarCatalogos();
     this.cargarFormularios();
+    this.formulariosWsSub = this.socketService
+      .suscribirAFormulariosEmpresa(this.empresaId)
+      .subscribe(() => this.cargarFormularios());
+  }
+
+  ngOnDestroy(): void {
+    this.formulariosWsSub?.unsubscribe();
   }
 
   get campos(): FormArray {

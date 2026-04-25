@@ -33,7 +33,6 @@
 
 .politica-block {
   margin-bottom: 20px;
-
   h3 {
     color: var(--primary-100);
     margin: 0;
@@ -106,6 +105,11 @@
 
 .form-modal {
   max-width: 1000px;
+}
+
+.campo-list
+{
+    color: #000000;
 }
 
 @media (max-width: 980px) {
