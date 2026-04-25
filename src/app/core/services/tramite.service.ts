@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import { EjecucionNodo } from './ejecucion.service';
 
+// ─── Modelo base ──────────────────────────────────────────────────────────────
+
 export interface Tramite {
   id: string;
   politicaId: string;
@@ -24,18 +26,55 @@ export interface TramiteDetalle {
   ejecuciones: EjecucionNodo[];
 }
 
-export interface MonitorNodoEstado {
+// ─── Trámite detallado (dashboard enriquecido) ────────────────────────────────
+
+export interface TramiteDetallado {
+  id: string;
+  titulo: string;
+  estadoGeneral: string;
+  prioridad: string;
+  nombrePolitica?: string;
+  nodoActualNombre?: string;
+  departamentoActualNombre?: string;
+  funcionarioActualNombre?: string;
+  iniciadoEn?: string;
+  finalizadoEn?: string;
+  fechaLimite?: string;
+  tiempoTranscurrido?: string;
+  duracionTotal?: string;
+  motivoRechazo?: string;
+  nodoRechazoNombre?: string;
+  departamentoRechazoNombre?: string;
+}
+
+// ─── Monitor ──────────────────────────────────────────────────────────────────
+
+export interface MonitorTramiteEnNodo {
+  tramiteId: string;
+  titulo: string;
+  prioridad: string;
+  ejecucionId: string;
+  funcionarioNombre: string;
+  tiempoTranscurrido: string;
+}
+
+export interface MonitorNodoActivo {
   nodoId: string;
   nombreNodo: string;
-  nombreDepartamento: string | null;
-  tipo: string;
-  color: 'VERDE' | 'AMARILLO' | 'ROJO' | 'NARANJA' | 'GRIS';
-  tramitesActivos: Array<{
-    tramiteId: string;
-    titulo: string;
-    prioridad: string;
-    ejecucionId: string;
-  }>;
+  tramitesActivos: MonitorTramiteEnNodo[];
+}
+
+export interface MonitorDepartamento {
+  departamentoId: string;
+  nombreDepartamento: string;
+  color: 'AMARILLO' | 'ROJO' | 'VACIO';
+  nodosActivos: MonitorNodoActivo[];
+}
+
+export interface MonitorEstadisticas {
+  activos: number;
+  completados: number;
+  rechazados: number;
 }
 
 export interface MonitorTramiteActivo {
@@ -43,19 +82,18 @@ export interface MonitorTramiteActivo {
   titulo: string;
   prioridad: string;
   estadoGeneral: string;
-  nodoActualNombre?: string;
   departamentoActualNombre?: string;
-  iniciadoEn?: string;
 }
 
 export interface MonitorPoliticaResponse {
   politicaId?: string;
   nombrePolitica?: string;
-  nodos: MonitorNodoEstado[];
+  estadisticas: MonitorEstadisticas;
+  departamentos: MonitorDepartamento[];
   tramitesActivos: MonitorTramiteActivo[];
-  tramitesCompletados: number;
-  tramitesRechazados: number;
 }
+
+// ─── Service ──────────────────────────────────────────────────────────────────
 
 @Injectable({
   providedIn: 'root'
@@ -71,6 +109,10 @@ export class TramiteService {
 
   listarPorEmpresa(empresaId: string): Observable<ApiResponse<Tramite[]>> {
     return this.http.get<ApiResponse<Tramite[]>>(`${this.apiUrl}/empresa/${empresaId}`);
+  }
+
+  listarPorEmpresaDetallado(empresaId: string): Observable<ApiResponse<TramiteDetallado[]>> {
+    return this.http.get<ApiResponse<TramiteDetallado[]>>(`${this.apiUrl}/empresa/${empresaId}`);
   }
 
   listarPorPolitica(politicaId: string): Observable<ApiResponse<Tramite[]>> {
