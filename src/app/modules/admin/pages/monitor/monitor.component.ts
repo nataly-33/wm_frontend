@@ -5,6 +5,7 @@ import { ApiResponse } from '../../../../core/models/api-response.model';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
 import { SocketService } from '../../../../core/services/socket.service';
 import {
+  MonitorNodoEstado,
   MonitorPoliticaResponse,
   TramiteService
 } from '../../../../core/services/tramite.service';
@@ -82,7 +83,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
       });
   }
 
-  private cargarMonitor(): void {
+  cargarMonitor(): void {
     if (!this.politicaSeleccionadaId) {
       return;
     }
@@ -117,7 +118,79 @@ export class MonitorComponent implements OnInit, OnDestroy {
         if (this.eventosRecientes.length > 8) {
           this.eventosRecientes.pop();
         }
+        this.manejarEventoSocket(evento);
         this.cargarMonitor();
       });
+  }
+
+  private manejarEventoSocket(evento: any): void {
+    if (!this.monitor) return;
+    switch (evento.tipo) {
+      case 'NODO_COMPLETADO':
+        this.actualizarColorNodo(evento.nodoAnteriorId, 'VERDE');
+        this.actualizarColorNodo(evento.nodoActualId, 'AMARILLO');
+        break;
+      case 'TRAMITE_COMPLETADO':
+        this.monitor.tramitesCompletados = (this.monitor.tramitesCompletados || 0) + 1;
+        break;
+      case 'TRAMITE_RECHAZADO':
+        this.actualizarColorNodo(evento.nodoActualId, 'ROJO');
+        this.monitor.tramitesRechazados = (this.monitor.tramitesRechazados || 0) + 1;
+        break;
+      case 'TRAMITE_INICIADO':
+        this.actualizarColorNodo(evento.nodoActualId, 'AMARILLO');
+        break;
+    }
+  }
+
+  private actualizarColorNodo(nodoId: string, color: MonitorNodoEstado['color']): void {
+    if (!this.monitor || !nodoId) return;
+    const nodo = this.monitor.nodos.find(n => n.nodoId === nodoId);
+    if (nodo) {
+      nodo.color = color;
+    }
+  }
+
+  get nodosAgrupados(): { departamento: string; nodos: MonitorNodoEstado[] }[] {
+    if (!this.monitor?.nodos) return [];
+
+    const grupos = new Map<string, MonitorNodoEstado[]>();
+    const nodosVisibles = this.monitor.nodos.filter(n =>
+      n.tipo !== 'INICIO' && n.tipo !== 'FIN' && n.tipo !== 'PARALELO'
+    );
+
+    for (const nodo of nodosVisibles) {
+      const depto = nodo.nombreDepartamento || 'Sin departamento';
+      if (!grupos.has(depto)) {
+        grupos.set(depto, []);
+      }
+      grupos.get(depto)!.push(nodo);
+    }
+
+    return Array.from(grupos.entries()).map(([departamento, nodos]) => ({
+      departamento,
+      nodos
+    }));
+  }
+
+  getTooltip(nodo: MonitorNodoEstado): string {
+    if (!nodo.tramitesActivos?.length) return nodo.nombreNodo || '';
+    const lista = nodo.tramitesActivos
+      .map(t => `${t.titulo} (${t.prioridad})`)
+      .join('\n');
+    return `${nodo.nombreNodo}\n${nodo.tramitesActivos.length} activo(s):\n${lista}`;
+  }
+
+  getPrioridadClass(prioridad: string): string {
+    switch (prioridad) {
+      case 'ALTA': return 'chip-alta';
+      case 'MEDIA': return 'chip-media';
+      case 'BAJA': return 'chip-baja';
+      default: return 'chip-media';
+    }
+  }
+
+  get totalActivos(): number {
+    return this.monitor?.tramitesActivos?.length ?? 0;
   }
 }
