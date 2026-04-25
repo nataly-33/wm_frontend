@@ -1,9 +1,10 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="page-title">Formularios por nodo</h1>
-      <p class="page-subtitle">Dia 3 - Admin Departamento</p>
+      <h1 class="page-title">Mis Formularios</h1>
+      <p class="page-subtitle">Formularios de mi departamento agrupados por política</p>
     </div>
+    <button class="btn btn-primary" (click)="abrirModalCrear()">Crear formulario</button>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
@@ -21,16 +22,8 @@
             </div>
 
             <div class="item-actions">
-              <button class="btn btn-secondary mini" (click)="editarDesdeListado(item)">
+              <button class="btn btn-secondary mini" (click)="abrirModalDesdeListado(item)">
                 {{ item.formulario ? 'Editar' : 'Crear' }}
-              </button>
-              <button
-                *ngIf="item.formulario"
-                class="btn btn-danger mini"
-                (click)="eliminarDesdeListado(item)"
-                [disabled]="guardando"
-              >
-                Eliminar
               </button>
             </div>
           </div>
@@ -38,51 +31,67 @@
       </article>
     </div>
   </section>
+</div>
 
-  <section class="panel-light">
-    <div class="selectors">
-      <select class="form-input light" [value]="politicaId" (change)="onPoliticaChange($event)">
-        <option value="">Selecciona politica</option>
-        <option *ngFor="let p of politicas" [value]="p.id">{{ p.nombre }}</option>
-      </select>
-      <select class="form-input light" [value]="nodoId" (change)="onNodoChange($event)">
-        <option value="">Selecciona nodo</option>
-        <option *ngFor="let n of nodos" [value]="n.id">{{ n.nombre }} ({{ n.tipo }})</option>
-      </select>
-    </div>
-  </section>
-
-  <form class="panel-light" [formGroup]="form" (ngSubmit)="guardar()">
-    <h3>Editor de formulario</h3>
-    <div class="form-group">
-      <label class="form-label">Nombre del formulario</label>
-      <input class="form-input light" formControlName="nombre" />
+<div class="modal-overlay" *ngIf="mostrarModal">
+  <div class="modal-dialog form-modal">
+    <div class="modal-header">
+      <h2>{{ modo === 'editar' ? 'Editar formulario' : 'Crear formulario' }}</h2>
+      <button class="btn-close-modal" (click)="cerrarModal()">×</button>
     </div>
 
-    <div formArrayName="campos" class="campo-list">
-      <div class="campo-item" *ngFor="let campo of campos.controls; let i = index" [formGroupName]="i">
-        <input class="form-input light" formControlName="nombre" placeholder="nombre tecnico" />
-        <input class="form-input light" formControlName="etiqueta" placeholder="etiqueta" />
-        <select class="form-input light" formControlName="tipo">
-          <option value="TEXTO">TEXTO</option>
-          <option value="NUMERO">NUMERO</option>
-          <option value="FECHA">FECHA</option>
-          <option value="SELECCION">SELECCION</option>
-          <option value="ARCHIVO">ARCHIVO</option>
-          <option value="IMAGEN">IMAGEN</option>
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="selectors">
+        <select class="form-input light" [value]="politicaId" (change)="onPoliticaChange($event)">
+          <option value="">Selecciona política</option>
+          <option *ngFor="let p of politicas" [value]="p.id">{{ p.nombre }}</option>
         </select>
-        <input class="form-input light" formControlName="opcionesRaw" placeholder="opciones: A,B,C" />
-        <label><input type="checkbox" formControlName="requerido" /> Requerido</label>
-        <label><input type="checkbox" formControlName="esCampoPrioridad" /> Campo prioridad</label>
-        <button type="button" class="btn btn-danger mini" (click)="quitarCampo(i)">Quitar</button>
-      </div>
-    </div>
 
-    <div class="actions">
-      <button type="button" class="btn btn-secondary" (click)="agregarCampo()">Agregar campo</button>
-      <button type="submit" class="btn btn-primary" [disabled]="guardando">
-        {{ guardando ? 'Guardando...' : (formularioId ? 'Actualizar formulario' : 'Crear formulario') }}
-      </button>
-    </div>
-  </form>
+        <select class="form-input light" [value]="nodoId" (change)="onNodoChange($event)">
+          <option value="">Selecciona nodo</option>
+          <option *ngFor="let n of nodos" [value]="n.id">{{ n.nombre }} ({{ n.tipo }})</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre del formulario</label>
+        <input class="form-input light" formControlName="nombre" />
+      </div>
+
+      <div formArrayName="campos" class="campo-list">
+        <div class="campo-item" *ngFor="let campo of campos.controls; let i = index" [formGroupName]="i">
+          <input class="form-input light" formControlName="nombre" placeholder="nombre técnico" />
+          <input class="form-input light" formControlName="etiqueta" placeholder="etiqueta" />
+          <select class="form-input light" formControlName="tipo">
+            <option value="TEXTO">TEXTO</option>
+            <option value="NUMERO">NUMERO</option>
+            <option value="FECHA">FECHA</option>
+            <option value="SELECCION">SELECCION</option>
+            <option value="ARCHIVO">ARCHIVO</option>
+            <option value="IMAGEN">IMAGEN</option>
+          </select>
+          <input class="form-input light" formControlName="opcionesRaw" placeholder="opciones: A,B,C" />
+          <label><input type="checkbox" formControlName="requerido" /> Requerido</label>
+          <label><input type="checkbox" formControlName="esCampoPrioridad" /> Campo prioridad</label>
+          <button type="button" class="btn btn-danger mini" (click)="quitarCampo(i)">Quitar</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" (click)="agregarCampo()">Agregar campo</button>
+        <button type="submit" class="btn btn-primary" [disabled]="guardando">
+          {{ guardando ? 'Guardando...' : (modo === 'editar' ? 'Actualizar' : 'Crear') }}
+        </button>
+        <button
+          *ngIf="modo === 'editar'"
+          type="button"
+          class="btn btn-danger"
+          (click)="eliminarActual()"
+          [disabled]="eliminando"
+        >
+          {{ eliminando ? 'Eliminando...' : 'Eliminar' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </div>

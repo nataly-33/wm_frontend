@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import {
   FormularioDepartamentoItem,
   FormularioService,
   FormulariosAgrupadosPorPolitica
 } from '../../../../core/services/formulario.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { SocketService } from '../../../../core/services/socket.service';
 
 interface PoliticaOption {
   id: string;
@@ -26,7 +28,7 @@ interface NodoOption {
   templateUrl: './formularios.component.html',
   styleUrls: ['./formularios.component.scss']
 })
-export class FormulariosComponent implements OnInit {
+export class FormulariosComponent implements OnInit, OnDestroy {
   politicas: PoliticaOption[] = [];
   nodos: NodoOption[] = [];
   itemsDepartamento: FormularioDepartamentoItem[] = [];
@@ -37,14 +39,20 @@ export class FormulariosComponent implements OnInit {
   formularioId: string | null = null;
   error: string | null = null;
   guardando = false;
+  eliminando = false;
 
   userDepartamentoId = '';
 
+  mostrarModal = false;
+  modo: 'crear' | 'editar' = 'crear';
+
   form!: FormGroup;
+  private formulariosWsSub?: Subscription;
 
   constructor(
     private formularioService: FormularioService,
     private authService: AuthService,
+    private socketService: SocketService,
     private fb: FormBuilder
   ) {}
 
@@ -63,6 +71,13 @@ export class FormulariosComponent implements OnInit {
 
     this.userDepartamentoId = user.departamentoId;
     this.cargarDatosDepartamento();
+    this.formulariosWsSub = this.socketService
+      .suscribirAFormulariosDepartamento(this.userDepartamentoId)
+      .subscribe(() => this.cargarDatosDepartamento());
+  }
+
+  ngOnDestroy(): void {
+    this.formulariosWsSub?.unsubscribe();
   }
 
   get campos(): FormArray {
@@ -87,6 +102,55 @@ export class FormulariosComponent implements OnInit {
     this.campos.removeAt(index);
   }
 
+  abrirModalCrear(): void {
+    this.modo = 'crear';
+    this.mostrarModal = true;
+    this.error = null;
+    this.formularioId = null;
+    this.politicaId = '';
+    this.nodoId = '';
+    this.nodos = [];
+    this.resetFormulario();
+  }
+
+  abrirModalDesdeListado(item: FormularioDepartamentoItem): void {
+    this.error = null;
+    this.mostrarModal = true;
+    this.politicaId = item.politicaId;
+    this.cargarNodos();
+    this.nodoId = item.nodoId;
+
+    if (item.formulario) {
+      this.modo = 'editar';
+      this.formularioId = item.formulario.id;
+      this.form.patchValue({ nombre: item.formulario.nombre });
+      this.campos.clear();
+      item.formulario.campos.forEach((c) => {
+        this.campos.push(
+          this.fb.group({
+            nombre: [c.nombre, Validators.required],
+            etiqueta: [c.etiqueta, Validators.required],
+            tipo: [c.tipo, Validators.required],
+            requerido: [c.requerido],
+            esCampoPrioridad: [c.esCampoPrioridad],
+            opcionesRaw: [(c.opciones ?? []).join(',')]
+          })
+        );
+      });
+    } else {
+      this.modo = 'crear';
+      this.formularioId = null;
+      this.resetFormulario();
+    }
+  }
+
+  cerrarModal(): void {
+    this.mostrarModal = false;
+    this.guardando = false;
+    this.eliminando = false;
+    this.error = null;
+  }
+
   cargarDatosDepartamento(): void {
     this.formularioService.listarPorDepartamento(this.userDepartamentoId).subscribe({
       next: (res) => {
@@ -103,36 +167,6 @@ export class FormulariosComponent implements OnInit {
       },
       error: (err) => {
         this.error = err?.error?.message ?? 'No se pudieron cargar formularios del departamento';
-      }
-    });
-  }
-
-  editarDesdeListado(item: FormularioDepartamentoItem): void {
-    this.politicaId = item.politicaId;
-    this.cargarNodos();
-    this.nodoId = item.nodoId;
-    this.cargarFormularioDesdeLista();
-  }
-
-  eliminarDesdeListado(item: FormularioDepartamentoItem): void {
-    if (!item.formulario) {
-      this.error = 'Este nodo no tiene formulario para eliminar';
-      return;
-    }
-
-    this.guardando = true;
-    this.formularioService.eliminar(item.formulario.id).subscribe({
-      next: () => {
-        this.guardando = false;
-        this.cargarDatosDepartamento();
-        if (this.nodoId === item.nodoId) {
-          this.formularioId = null;
-          this.resetFormulario();
-        }
-      },
-      error: (err) => {
-        this.guardando = false;
-        this.error = err?.error?.message ?? 'No se pudo eliminar';
       }
     });
   }
@@ -181,11 +215,13 @@ export class FormulariosComponent implements OnInit {
   cargarFormularioDesdeLista(): void {
     const item = this.itemsDepartamento.find((i) => i.nodoId === this.nodoId);
     if (!item?.formulario) {
+      this.modo = 'crear';
       this.formularioId = null;
       this.resetFormulario();
       return;
     }
 
+    this.modo = 'editar';
     const data = item.formulario;
     this.formularioId = data.id;
     this.form.patchValue({ nombre: data.nombre });
@@ -236,11 +272,32 @@ export class FormulariosComponent implements OnInit {
     op.subscribe({
       next: () => {
         this.guardando = false;
+        this.cerrarModal();
         this.cargarDatosDepartamento();
       },
       error: (err) => {
         this.guardando = false;
         this.error = err?.error?.message ?? 'No se pudo guardar';
+      }
+    });
+  }
+
+  eliminarActual(): void {
+    if (!this.formularioId) {
+      this.error = 'No hay formulario seleccionado para eliminar';
+      return;
+    }
+
+    this.eliminando = true;
+    this.formularioService.eliminar(this.formularioId).subscribe({
+      next: () => {
+        this.eliminando = false;
+        this.cerrarModal();
+        this.cargarDatosDepartamento();
+      },
+      error: (err) => {
+        this.eliminando = false;
+        this.error = err?.error?.message ?? 'No se pudo eliminar';
       }
     });
   }
