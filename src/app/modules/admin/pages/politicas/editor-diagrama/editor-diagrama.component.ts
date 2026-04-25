@@ -1018,7 +1018,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       link.router('normal');
       link.attr(['line', 'stroke'], '#7A7A40');
       link.attr(['line', 'strokeWidth'], 2.2);
-      this.aplicarReglasDeTransicion(link);
+      // No llamar aplicarReglasDeTransicion aquí: destruiría las etiquetas guardadas en el JSON
     });
   }
 
@@ -1510,8 +1510,12 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
       outgoing.forEach((outLink, index) => {
         outLink.set('transicionTipo', 'ALTERNATIVA');
-        const etiqueta = index === 0 ? 'Si' : index === 1 ? 'No' : `Opcion ${index + 1}`;
-        this.setLinkLabel(outLink, this.formatLinkLabel(etiqueta, 'ALTERNATIVA'));
+        // Solo asignar etiqueta si el link no tiene una ya — no sobreescribir etiquetas guardadas
+        const etiquetaActual = this.unformatLinkLabel(this.getLinkLabel(outLink));
+        if (!etiquetaActual) {
+          const etiqueta = index === 0 ? 'Aprobado' : index === 1 ? 'Rechazado' : `Opcion ${index + 1}`;
+          this.setLinkLabel(outLink, this.formatLinkLabel(etiqueta, 'ALTERNATIVA'));
+        }
       });
       return;
     }
