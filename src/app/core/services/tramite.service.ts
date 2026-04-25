@@ -26,22 +26,33 @@ export interface TramiteDetalle {
 
 export interface MonitorNodoEstado {
   nodoId: string;
+  nombreNodo: string;
+  nombreDepartamento: string | null;
+  tipo: string;
   color: 'VERDE' | 'AMARILLO' | 'ROJO' | 'NARANJA' | 'GRIS';
   tramitesActivos: Array<{
     tramiteId: string;
     titulo: string;
     prioridad: string;
+    ejecucionId: string;
   }>;
 }
 
+export interface MonitorTramiteActivo {
+  tramiteId: string;
+  titulo: string;
+  prioridad: string;
+  estadoGeneral: string;
+  nodoActualNombre?: string;
+  departamentoActualNombre?: string;
+  iniciadoEn?: string;
+}
+
 export interface MonitorPoliticaResponse {
+  politicaId?: string;
+  nombrePolitica?: string;
   nodos: MonitorNodoEstado[];
-  tramitesActivos: Array<{
-    tramiteId: string;
-    titulo: string;
-    prioridad: string;
-    estado: string;
-  }>;
+  tramitesActivos: MonitorTramiteActivo[];
   tramitesCompletados: number;
   tramitesRechazados: number;
 }

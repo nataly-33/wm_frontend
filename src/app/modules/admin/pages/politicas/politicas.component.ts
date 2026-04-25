@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
 import { CrearPoliticaRequest, Politica, PoliticaService } from '../../../../core/services/politica.service';
+import { TramiteService } from '../../../../core/services/tramite.service';
 
 @Component({
   selector: 'app-politicas',
@@ -16,14 +17,18 @@ import { CrearPoliticaRequest, Politica, PoliticaService } from '../../../../cor
 export class PoliticasComponent implements OnInit {
   politicas: Politica[] = [];
   form!: FormGroup;
+  formTramite!: FormGroup;
   cargando = false;
   guardando = false;
   error: string | null = null;
   mostrarModal = false;
+  mostrarModalTramite = false;
   editandoId: string | null = null;
+  politicaSeleccionada: Politica | null = null;
 
   constructor(
     private politicaService: PoliticaService,
+    private tramiteService: TramiteService,
     private fb: FormBuilder,
     private router: Router
   ) {}
@@ -32,6 +37,11 @@ export class PoliticasComponent implements OnInit {
     this.form = this.fb.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
       descripcion: ['', [Validators.required, Validators.minLength(10)]]
+    });
+    this.formTramite = this.fb.group({
+      titulo: ['', [Validators.required, Validators.minLength(5)]],
+      prioridad: ['MEDIA', Validators.required],
+      fechaLimite: ['', Validators.required]
     });
     this.cargar();
   }
@@ -128,5 +138,44 @@ export class PoliticasComponent implements OnInit {
     if (estado === 'ACTIVA') return 'badge badge--success';
     if (estado === 'INACTIVA') return 'badge badge--warning';
     return 'badge badge--info';
+  }
+
+  abrirModalTramite(politica: Politica): void {
+    this.error = null;
+    this.politicaSeleccionada = politica;
+    this.formTramite.reset({ prioridad: 'MEDIA' });
+    this.mostrarModalTramite = true;
+  }
+
+  cerrarModalTramite(): void {
+    this.mostrarModalTramite = false;
+    this.politicaSeleccionada = null;
+    this.formTramite.reset({ prioridad: 'MEDIA' });
+  }
+
+  iniciarTramite(): void {
+    if (this.formTramite.invalid || !this.politicaSeleccionada) {
+      this.error = 'Completa los campos requeridos';
+      return;
+    }
+    this.guardando = true;
+    const body = {
+      politicaId: this.politicaSeleccionada.id,
+      titulo: this.formTramite.value.titulo,
+      prioridad: this.formTramite.value.prioridad,
+      fechaLimite: this.formTramite.value.fechaLimite
+    };
+    this.tramiteService.iniciar(body).subscribe({
+      next: () => {
+        this.guardando = false;
+        this.cerrarModalTramite();
+        this.error = null;
+        alert('Trámite iniciado correctamente');
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.guardando = false;
+        this.error = err?.error?.message ?? 'Error al iniciar trámite';
+      }
+    });
   }
 }

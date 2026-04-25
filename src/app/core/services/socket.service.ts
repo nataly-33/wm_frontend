@@ -13,6 +13,9 @@ export class SocketService {
   private notificacionesSubject = new Subject<any>();
   private monitorSubjects = new Map<string, Subject<any>>();
   private monitorSubscriptions = new Set<string>();
+  private formulariosEmpresaSubjects = new Map<string, Subject<any>>();
+  private formulariosDeptoSubjects = new Map<string, Subject<any>>();
+  private formulariosSubscriptions = new Set<string>();
 
   constructor(private authService: AuthService) {
     this.conectar();
@@ -75,5 +78,57 @@ export class SocketService {
 
   getNotificaciones(): Observable<any> {
     return this.notificacionesSubject.asObservable();
+  }
+
+  suscribirAFormulariosEmpresa(empresaId: string): Observable<any> {
+    if (!this.formulariosEmpresaSubjects.has(empresaId)) {
+      this.formulariosEmpresaSubjects.set(empresaId, new Subject<any>());
+    }
+
+    const subject = this.formulariosEmpresaSubjects.get(empresaId)!;
+    const topic = `/topic/empresa/${empresaId}/formularios`;
+
+    const intentarSuscripcion = () => {
+      if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
+        this.client.subscribe(topic, (message: Message) => {
+          subject.next(JSON.parse(message.body));
+        });
+        this.formulariosSubscriptions.add(topic);
+      }
+    };
+
+    if (this.client && this.client.connected) {
+      intentarSuscripcion();
+    } else {
+      setTimeout(() => intentarSuscripcion(), 2000);
+    }
+
+    return subject.asObservable();
+  }
+
+  suscribirAFormulariosDepartamento(departamentoId: string): Observable<any> {
+    if (!this.formulariosDeptoSubjects.has(departamentoId)) {
+      this.formulariosDeptoSubjects.set(departamentoId, new Subject<any>());
+    }
+
+    const subject = this.formulariosDeptoSubjects.get(departamentoId)!;
+    const topic = `/topic/departamento/${departamentoId}/formularios`;
+
+    const intentarSuscripcion = () => {
+      if (this.client && this.client.connected && !this.formulariosSubscriptions.has(topic)) {
+        this.client.subscribe(topic, (message: Message) => {
+          subject.next(JSON.parse(message.body));
+        });
+        this.formulariosSubscriptions.add(topic);
+      }
+    };
+
+    if (this.client && this.client.connected) {
+      intentarSuscripcion();
+    } else {
+      setTimeout(() => intentarSuscripcion(), 2000);
+    }
+
+    return subject.asObservable();
   }
 }

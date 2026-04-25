@@ -16,10 +16,25 @@ export interface EjecucionNodo {
   iniciadoEn: Date;
   completadoEn?: Date;
   observaciones?: string;
-  
+
   // Virtual properties for UI
   tramiteTitulo?: string;
   prioridad?: string;
+}
+
+export interface EjecucionDetallada {
+  id: string;
+  estado: string;
+  nombreNodo: string;
+  nombrePolitica: string;
+  tituloTramite: string;
+  prioridad: string;
+  fechaLimite?: string;
+  iniciadoEn?: string;
+  nombreDepartamento: string;
+  tramiteId: string;
+  politicaId: string;
+  nodoId: string;
 }
 
 @Injectable({
@@ -34,8 +49,8 @@ export class EjecucionService {
     return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/departamento/${departamentoId}`);
   }
 
-  listarPorFuncionario(usuarioId: string): Observable<ApiResponse<EjecucionNodo[]>> {
-    return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/funcionario/${usuarioId}`);
+  listarPorFuncionario(usuarioId: string): Observable<ApiResponse<EjecucionDetallada[]>> {
+    return this.http.get<ApiResponse<EjecucionDetallada[]>>(`${this.apiUrl}/funcionario/${usuarioId}`);
   }
 
   listarPorTramite(tramiteId: string): Observable<ApiResponse<EjecucionNodo[]>> {

@@ -376,6 +376,59 @@ html, body {
 }
 
 // ================================================
+// DARK MODE — Inputs, selects, textareas
+// ================================================
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  background-color: var(--bg-surface, #1e1e0e) !important;
+  color: var(--text-primary, #f5f5e8) !important;
+  border: 1.5px solid var(--border, #565620) !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+
+  &:focus {
+    border-color: var(--primary-200, #9D9D60) !important;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(157, 157, 96, 0.15) !important;
+    background-color: var(--bg-dark, #141407) !important;
+  }
+
+  &::placeholder {
+    color: rgba(157, 157, 96, 0.5) !important;
+  }
+
+  &.is-invalid {
+    border-color: var(--danger, #f44250) !important;
+    box-shadow: 0 0 0 3px rgba(244, 66, 80, 0.12) !important;
+  }
+}
+
+select option {
+  background-color: var(--bg-card, #2e2e14);
+  color: var(--text-primary, #f5f5e8);
+}
+
+.form-container,
+.form-card {
+  background-color: var(--bg-card, #2e2e14) !important;
+  color: var(--text-primary, #f5f5e8) !important;
+  border: 1px solid var(--border, #565620);
+  border-radius: var(--radius-lg, 12px);
+  padding: 24px;
+}
+
+label:not(.mat-mdc-floating-label):not(.mat-checkbox-label) {
+  color: var(--primary-200, #9D9D60);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+// ================================================
 // ANIMACIONES
 // ================================================
 @keyframes spin {
