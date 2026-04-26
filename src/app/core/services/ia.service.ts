@@ -37,6 +37,8 @@ export interface DiagramaIaResponse {
   nodos: NodoIaResponse[];
   transiciones: TransicionIaResponse[];
   departamentosDetectados: string[];
+  metodo_usado?: string;
+  advertencia?: string | null;
 }
 
 export interface GenerarFormularioRequest {
