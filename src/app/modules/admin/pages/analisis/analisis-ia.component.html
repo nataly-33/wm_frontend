@@ -1,0 +1,145 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Analisis de Cuellos de Botella</h1>
+      <p class="page-subtitle">Detecta nodos criticos en tus procesos usando modelos de Machine Learning</p>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = null">x</button>
+  </div>
+
+  <!-- Selector y boton -->
+  <div class="controls-bar">
+    <select
+      class="form-select"
+      [(ngModel)]="politicaId"
+      [disabled]="cargandoPoliticas || cargando"
+    >
+      <option value="">Seleccionar politica...</option>
+      <option *ngFor="let p of politicas" [value]="p.id">{{ p.nombre }}</option>
+    </select>
+    <button
+      class="btn btn-primary"
+      (click)="analizarPolitica()"
+      [disabled]="!politicaId || cargando"
+    >
+      {{ cargando ? 'Analizando...' : 'Analizar ahora' }}
+    </button>
+  </div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Ejecutando modelos de ML...</p>
+  </div>
+
+  <!-- Sin datos -->
+  <div *ngIf="analisisRealizado && !cargando && resultados.length === 0" class="empty-state">
+    <h3>Sin datos suficientes</h3>
+    <p>{{ mensajeSinDatos }}</p>
+  </div>
+
+  <!-- Dashboard con resultados -->
+  <div class="dashboard" *ngIf="resultados.length > 0 && !cargando">
+
+    <!-- Resumen + Top 3 -->
+    <div class="summary-row">
+      <div class="summary-card">
+        <h3 class="card-title">Resumen general</h3>
+        <div class="summary-stat">
+          <span class="stat-label">Nodos analizados</span>
+          <span class="stat-value">{{ resultados.length }}</span>
+        </div>
+        <div class="summary-stat">
+          <span class="stat-label">Cuellos detectados</span>
+          <span class="stat-value stat-value--alert">{{ nodosConCuello.length }}</span>
+        </div>
+      </div>
+
+      <div class="top3-card">
+        <h3 class="card-title">Top 3 nodos criticos</h3>
+        <div class="top3-list">
+          <div class="top3-item" *ngFor="let r of top3">
+            <div class="top3-header">
+              <span class="top3-nombre">{{ r.nombre_nodo }}</span>
+              <span [class]="getSeveridadClass(r.severidad)">{{ r.severidad }}</span>
+            </div>
+            <div class="top3-meta">
+              Prob: {{ (r.probabilidad_cuello * 100).toFixed(0) }}% |
+              Tiempo: {{ formatMinutos(r.metricas.tiempo_promedio_minutos) }} |
+              Rechazo: {{ r.metricas.tasa_rechazo_pct }}%
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafico de barras -->
+    <div class="chart-card">
+      <h3 class="card-title">Probabilidad de cuello por nodo</h3>
+      <div class="chart-list">
+        <div class="nodo-barra" *ngFor="let r of resultados">
+          <div class="nodo-nombre">{{ r.nombre_nodo }}</div>
+          <div class="barra-container">
+            <div
+              [class]="getBarraClass(r.severidad)"
+              [style.width.%]="r.probabilidad_cuello * 100"
+            ></div>
+            <span class="barra-valor">{{ (r.probabilidad_cuello * 100).toFixed(0) }}%</span>
+          </div>
+          <span [class]="getSeveridadClass(r.severidad)">{{ r.severidad }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle por nodo -->
+    <div class="detalle-card">
+      <h3 class="card-title">Detalle por nodo</h3>
+      <div class="nodo-detalle" *ngFor="let r of resultados">
+        <div class="nodo-detalle-header">
+          <span class="nodo-detalle-nombre">{{ r.nombre_nodo }}</span>
+          <div class="nodo-detalle-badges">
+            <span [class]="getSeveridadClass(r.severidad)">{{ r.severidad }}</span>
+            <span class="badge badge--prob">{{ (r.probabilidad_cuello * 100).toFixed(0) }}% cuello</span>
+            <span class="badge badge--anomalia" *ngIf="r.es_anomalia_estadistica">Anomalia</span>
+          </div>
+        </div>
+
+        <div class="nodo-metricas">
+          <div class="metrica">
+            <span class="metrica-label">Tiempo prom.</span>
+            <span class="metrica-valor">{{ formatMinutos(r.metricas.tiempo_promedio_minutos) }}</span>
+          </div>
+          <div class="metrica">
+            <span class="metrica-label">Tasa rechazo</span>
+            <span class="metrica-valor">{{ r.metricas.tasa_rechazo_pct }}%</span>
+          </div>
+          <div class="metrica">
+            <span class="metrica-label">Activas</span>
+            <span class="metrica-valor">{{ r.metricas.ejecuciones_activas }}</span>
+          </div>
+        </div>
+
+        <div class="ensemble-bar">
+          <div class="barra-container barra-container--sm">
+            <div
+              [class]="getBarraClass(r.severidad)"
+              [style.width.%]="r.probabilidad_cuello * 100"
+            ></div>
+          </div>
+          <span class="ensemble-label">RF: {{ (r.prob_random_forest * 100).toFixed(0) }}% | GB: {{ (r.prob_gradient_boosting * 100).toFixed(0) }}%</span>
+        </div>
+
+        <div class="sugerencias" *ngIf="r.sugerencias.length > 0">
+          <p class="sugerencias-titulo">Sugerencias:</p>
+          <ul>
+            <li *ngFor="let s of r.sugerencias">{{ s }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
