@@ -43,6 +43,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'politicas/nueva',
+        loadComponent: () =>
+          import('./modules/admin/pages/politicas/nueva-politica/nueva-politica.component').then(
+            (m) => m.NuevaPoliticaComponent
+          )
+      },
+      {
         path: 'politicas/:id/editor',
         loadComponent: () =>
           import('./modules/admin/pages/politicas/editor-diagrama/editor-diagrama.component').then(
@@ -75,6 +82,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/admin/pages/tramites/tramite-detalle/tramite-detalle.component').then(
             (m) => m.TramiteDetalleComponent
+          )
+      },
+      {
+        path: 'analisis',
+        loadComponent: () =>
+          import('./modules/admin/pages/analisis/analisis-ia.component').then(
+            (m) => m.AnalisisIaComponent
           )
       }
     ]
