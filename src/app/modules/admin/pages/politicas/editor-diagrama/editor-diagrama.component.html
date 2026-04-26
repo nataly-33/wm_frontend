@@ -8,8 +8,11 @@
       <button class="btn btn-primary" (click)="guardarDiagrama()" [disabled]="guardando || cargando">
         {{ guardando ? 'Guardando...' : 'Guardar diagrama' }}
       </button>
+      <button class="btn btn-ia" (click)="abrirModalIa()" [disabled]="cargando" type="button">
+        Generar con IA
+      </button>
       <button class="btn btn-secondary" (click)="autoOrganizarDiagrama()" [disabled]="cargando" type="button">
-        ⊞ Auto organizar
+        Auto organizar
       </button>
       <button class="btn btn-secondary" (click)="togglePantallaCompleta()" type="button">
         {{ pantallaCompleta ? 'Achicar' : 'Agrandar' }}
@@ -139,6 +142,47 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" (click)="cancelarModalNodo()">Cancelar</button>
         <button class="btn btn-primary" type="button" (click)="guardarModalNodo()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Generar diagrama con IA -->
+  <div class="node-modal-backdrop" *ngIf="mostrarModalIa">
+    <div class="node-modal panel-light ia-modal">
+      <h3>Generar diagrama con IA</h3>
+      <p class="ia-modal-hint">Describe el proceso en lenguaje natural. Puedes escribir o usar el microfono.</p>
+
+      <div class="form-group">
+        <label>Descripcion del proceso</label>
+        <textarea
+          class="input-base ia-textarea"
+          rows="6"
+          [(ngModel)]="promptIa"
+          placeholder="Ej: El solicitante presenta la documentacion, el tecnico verifica si es viable. Si es aprobado, pasa a instalacion. Si no, se notifica el rechazo."
+        ></textarea>
+      </div>
+
+      <div class="ia-voice-row">
+        <button
+          class="btn btn-secondary"
+          type="button"
+          (click)="grabando ? detenerGrabacion() : iniciarGrabacion()"
+        >
+          {{ grabando ? 'Detener grabacion' : 'Grabar voz' }}
+        </button>
+        <span *ngIf="grabando" class="ia-grabando">Grabando...</span>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="cerrarModalIa()">Cancelar</button>
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="generarDiagramaConIa()"
+          [disabled]="cargandoIa || !promptIa.trim()"
+        >
+          {{ cargandoIa ? 'Generando...' : 'Generar diagrama' }}
+        </button>
       </div>
     </div>
   </div>

@@ -379,6 +379,41 @@
   gap: 8px;
 }
 
+.ia-modal {
+  width: min(560px, calc(100vw - 24px));
+}
+
+.ia-modal-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin: -4px 0 10px;
+}
+
+.ia-textarea {
+  resize: vertical;
+  min-height: 110px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.ia-voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ia-grabando {
+  font-size: 0.72rem;
+  color: #dc2626;
+  font-weight: 600;
+  animation: parpadeo 1s step-start infinite;
+}
+
+@keyframes parpadeo {
+  50% { opacity: 0; }
+}
+
 @media (max-width: 1280px) {
   .editor-layout {
     grid-template-columns: 122px minmax(0, 1fr);

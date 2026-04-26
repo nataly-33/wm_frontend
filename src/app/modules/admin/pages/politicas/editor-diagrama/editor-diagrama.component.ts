@@ -18,6 +18,7 @@ import {
 import { Departamento, DepartamentoService } from '../../../../../core/services/departamento.service';
 import { EstadoEditor, NodoEstado, TransicionEstado, validarDiagramaDetallado } from './diagram-validators';
 import { TransicionTipo } from '../../../../../core/services/transicion.service';
+import { IaService, DiagramaIaResponse } from '../../../../../core/services/ia.service';
 import {
   LayoutCarrilInput,
   LayoutNodeSize,
@@ -119,6 +120,13 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     formularioId: ''
   };
 
+  // IA — Generación de diagrama
+  mostrarModalIa = false;
+  promptIa = '';
+  cargandoIa = false;
+  grabando = false;
+  private recognition: any = null;
+
   readonly paletteItems: Array<{ tipo: NodoEstado['tipo']; label: string; preview: string }> = [
     { tipo: 'INICIO', label: 'Inicio', preview: 'shape-inicio' },
     { tipo: 'TAREA', label: 'Actividad', preview: 'shape-tarea' },
@@ -130,7 +138,8 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   constructor(
     private route: ActivatedRoute,
     private politicaService: PoliticaService,
-    private departamentoService: DepartamentoService
+    private departamentoService: DepartamentoService,
+    private iaService: IaService
   ) {}
 
   ngOnInit(): void {
@@ -1680,5 +1689,172 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const size = this.paper.getComputedSize();
     return Math.max(size.height || 0, 1600);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // IA — Modal y generación de diagrama
+  // ─────────────────────────────────────────────────────────────────────────
+
+  abrirModalIa(): void {
+    this.promptIa = '';
+    this.mostrarModalIa = true;
+  }
+
+  cerrarModalIa(): void {
+    this.detenerGrabacion();
+    this.mostrarModalIa = false;
+  }
+
+  iniciarGrabacion(): void {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      this.error = 'Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.';
+      return;
+    }
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.lang = 'es-BO';
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
+
+    this.recognition.onresult = (event: any) => {
+      let texto = '';
+      for (let i = 0; i < event.results.length; i++) {
+        texto += event.results[i][0].transcript;
+      }
+      this.promptIa = texto;
+    };
+
+    this.recognition.onerror = () => {
+      this.grabando = false;
+    };
+
+    this.recognition.start();
+    this.grabando = true;
+  }
+
+  detenerGrabacion(): void {
+    if (this.recognition) {
+      this.recognition.stop();
+      this.recognition = null;
+    }
+    this.grabando = false;
+  }
+
+  generarDiagramaConIa(): void {
+    if (!this.promptIa.trim()) return;
+
+    this.detenerGrabacion();
+    this.cargandoIa = true;
+    this.error = null;
+
+    const departamentos = this.lanes.map((l) => ({
+      id: l.departamentoId,
+      nombre: l.nombreDepartamento
+    }));
+
+    if (departamentos.length === 0) {
+      const todos = this.departamentosCompletos.map((d) => ({ id: d.id, nombre: d.nombre }));
+      this.ejecutarGeneracionIa(todos);
+    } else {
+      this.ejecutarGeneracionIa(departamentos);
+    }
+  }
+
+  private ejecutarGeneracionIa(departamentos: { id: string; nombre: string }[]): void {
+    this.iaService.generarDiagrama({
+      prompt: this.promptIa,
+      departamentos,
+      politicaId: this.politicaId
+    }).subscribe({
+      next: (resp) => {
+        this.cargandoIa = false;
+        const data = resp.data as DiagramaIaResponse;
+        if (!data?.nodos?.length) {
+          this.error = 'El modelo no generó nodos. Intenta con una descripcion mas detallada.';
+          return;
+        }
+
+        const tieneNodos = this.graph.getElements().some((el) => el.get('kind') === 'NODE');
+        if (tieneNodos) {
+          const confirmar = confirm(
+            'Reemplazar el diagrama actual con el generado por IA?\nPodras editarlo antes de guardar.'
+          );
+          if (!confirmar) return;
+        }
+
+        this.cargarDiagramaDesdeIa(data);
+        this.mostrarModalIa = false;
+        this.info = 'Diagrama generado. Puedes editarlo antes de guardar.';
+      },
+      error: (err) => {
+        this.cargandoIa = false;
+        this.error =
+          err.status === 503
+            ? 'El servicio de IA no esta disponible. Verifica que el microservicio Python este ejecutandose.'
+            : err.error?.message || 'Error al generar el diagrama con IA.';
+      }
+    });
+  }
+
+  private cargarDiagramaDesdeIa(data: DiagramaIaResponse): void {
+    this.graph.clear();
+    this.lanes = [];
+
+    const deptoIdsEnNodos = [
+      ...new Set(
+        data.nodos
+          .map((n) => n.departamentoId)
+          .filter((id): id is string => !!id)
+      )
+    ];
+
+    for (const deptoId of deptoIdsEnNodos) {
+      const depto = this.departamentosCompletos.find((d) => d.id === deptoId);
+      if (depto && !this.lanes.some((l) => l.departamentoId === deptoId)) {
+        this.insertLane(depto.id, depto.nombre);
+      }
+    }
+
+    if (this.lanes.length === 0 && this.departamentosCompletos.length > 0) {
+      const depto = this.departamentosCompletos[0];
+      this.insertLane(depto.id, depto.nombre);
+    }
+
+    const nodoByTempId = new Map<string, joint.dia.Element>();
+
+    for (const n of data.nodos) {
+      const tipo = this.normalizeNodoTipo(n.tipo);
+      const deptoId = n.departamentoId ?? (this.lanes[0]?.departamentoId ?? '');
+      const cell = this.createNode({
+        tempId: n.tempId,
+        tipo,
+        nombre: n.nombre || this.defaultLabelForTipo(tipo),
+        departamentoId: deptoId,
+        formularioId: n.formularioId ?? undefined,
+        posicionX: n.posicion_x,
+        posicionY: n.posicion_y
+      });
+      nodoByTempId.set(n.tempId, cell);
+    }
+
+    for (const t of data.transiciones) {
+      const source = nodoByTempId.get(t.nodoOrigenTempId);
+      const target = nodoByTempId.get(t.nodoDestinoTempId);
+      if (!source || !target) continue;
+
+      const ports = this.pickPorts(source, target);
+      const link = this.createLink();
+      link.source({ id: source.id, port: ports.source });
+      link.target({ id: target.id, port: ports.target });
+      link.set('transicionTipo', (t.tipo as TransicionTipo) || 'LINEAL');
+      link.set('condicion', t.condicion || '');
+      this.setLinkLabel(link, this.formatLinkLabel(t.etiqueta || '', (t.tipo as TransicionTipo) || 'LINEAL'));
+      this.graph.addCell(link);
+    }
+
+    this.ensurePaperDimensions();
   }
 }
