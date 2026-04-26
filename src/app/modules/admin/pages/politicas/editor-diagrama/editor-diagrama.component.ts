@@ -1787,14 +1787,22 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
         this.cargarDiagramaDesdeIa(data);
         this.mostrarModalIa = false;
-        this.info = 'Diagrama generado. Puedes editarlo antes de guardar.';
+        if (data.advertencia) {
+          this.info = data.advertencia;
+        } else {
+          this.info = 'Diagrama generado con IA. Puedes editarlo antes de guardar.';
+        }
       },
       error: (err) => {
         this.cargandoIa = false;
-        this.error =
+        const msg =
           err.status === 503
             ? 'El servicio de IA no esta disponible. Verifica que el microservicio Python este ejecutandose.'
-            : err.error?.message || 'Error al generar el diagrama con IA.';
+            : typeof err.error === 'string'
+              ? err.error
+              : err.error?.message || 'Error al generar el diagrama con IA.';
+        this.error = `Error al generar diagrama: ${msg}`;
+        // Keep modal open so user can retry
       }
     });
   }
@@ -1856,5 +1864,10 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     this.ensurePaperDimensions();
+
+    // Use the superior layout engine (same one used by seeder diagrams) to
+    // properly organize the IA-generated nodes with topological ordering,
+    // branch alignment, correct swim lanes, and proper port selection
+    setTimeout(() => this.autoOrganizarDiagrama(), 100);
   }
 }
