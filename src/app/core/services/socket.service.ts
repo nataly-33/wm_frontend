@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 })
 export class SocketService {
   private client!: Client;
+  private conectando = false;
   private notificacionesSubject = new Subject<any>();
   private monitorSubjects = new Map<string, Subject<any>>();
   private monitorSubscriptions = new Set<string>();
@@ -18,15 +19,28 @@ export class SocketService {
   private formulariosSubscriptions = new Set<string>();
 
   constructor(private authService: AuthService) {
-    this.conectar();
+    this.authService.getCurrentUser$().subscribe((user) => {
+      if (!user || !this.authService.getToken()) {
+        this.desconectar();
+        return;
+      }
+
+      this.ensureConectado();
+    });
+
+    this.ensureConectado();
   }
 
   private conectar(): void {
+    if (this.conectando) return;
     const token = this.authService.getToken();
     if (!token) return;
 
+    this.conectando = true;
+
     this.client = new Client({
       webSocketFactory: () => new SockJS(`${environment.apiUrl}/ws`),
+      connectHeaders: { Authorization: `Bearer ${token}` },
       debug: (str) => {
         // console.log(str);
       },
@@ -36,6 +50,7 @@ export class SocketService {
     });
 
     this.client.onConnect = () => {
+      this.conectando = false;
       console.log('WebSocket conectado');
       const user = this.authService.getCurrentUser();
       if (user) {
@@ -80,19 +95,41 @@ export class SocketService {
     };
 
     this.client.onDisconnect = () => {
+      this.conectando = false;
       console.log('WebSocket desconectado');
       this.monitorSubscriptions.clear();
       this.formulariosSubscriptions.clear();
     };
 
     this.client.onStompError = (frame) => {
+      this.conectando = false;
       console.error('Error STOMP:', frame);
+    };
+
+    this.client.onWebSocketError = () => {
+      this.conectando = false;
     };
 
     this.client.activate();
   }
 
+  private ensureConectado(): void {
+    if (this.client && this.client.active) return;
+    this.conectar();
+  }
+
+  private desconectar(): void {
+    if (this.client) {
+      this.client.deactivate();
+    }
+    this.monitorSubscriptions.clear();
+    this.formulariosSubscriptions.clear();
+    this.conectando = false;
+  }
+
   suscribirAMonitor(politicaId: string): Observable<any> {
+    this.ensureConectado();
+
     if (!this.monitorSubjects.has(politicaId)) {
       this.monitorSubjects.set(politicaId, new Subject<any>());
     }
@@ -117,6 +154,8 @@ export class SocketService {
   }
 
   suscribirAFormulariosEmpresa(empresaId: string): Observable<any> {
+    this.ensureConectado();
+
     if (!this.formulariosEmpresaSubjects.has(empresaId)) {
       this.formulariosEmpresaSubjects.set(empresaId, new Subject<any>());
     }
@@ -135,6 +174,8 @@ export class SocketService {
   }
 
   suscribirAFormulariosDepartamento(departamentoId: string): Observable<any> {
+    this.ensureConectado();
+
     if (!this.formulariosDeptoSubjects.has(departamentoId)) {
       this.formulariosDeptoSubjects.set(departamentoId, new Subject<any>());
     }
