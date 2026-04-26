@@ -70,11 +70,10 @@ export class PoliticasComponent implements OnInit {
         nombre: politica.nombre,
         descripcion: politica.descripcion
       });
+      this.mostrarModal = true;
     } else {
-      this.editandoId = null;
-      this.form.reset();
+      this.router.navigate(['/admin/politicas/nueva']);
     }
-    this.mostrarModal = true;
   }
 
   cerrarModal(): void {

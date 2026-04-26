@@ -1,0 +1,113 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Nueva politica</h1>
+    </div>
+    <button class="btn btn-secondary" (click)="cancelar()" [disabled]="enProgreso">
+      Volver
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = null">x</button>
+  </div>
+
+  <div *ngIf="advertenciaIa" class="alert alert-warning">
+    <span>{{ advertenciaIa }}</span>
+  </div>
+
+  <div class="form-card" *ngIf="!enProgreso && progreso !== 'listo'">
+    <form [formGroup]="form">
+      <div class="form-group">
+        <label class="form-label">Nombre de la politica <span class="required">*</span></label>
+        <input
+          class="form-input"
+          formControlName="nombre"
+          placeholder="Ej: Instalacion de servicio de agua"
+          [class.input-error]="form.get('nombre')?.invalid && form.get('nombre')?.touched"
+        />
+        <span class="field-hint" *ngIf="form.get('nombre')?.invalid && form.get('nombre')?.touched">
+          Minimo 3 caracteres
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descripcion del proceso <span class="required">*</span></label>
+        <p class="field-hint field-hint--example">
+          Ejemplo: "El cliente presenta solicitud en Atencion al Cliente. El tecnico verifica viabilidad. Si es aprobada, Facturacion registra el pago."
+        </p>
+        <textarea
+          class="form-input form-textarea"
+          formControlName="descripcion"
+          rows="6"
+          placeholder="Describe el proceso paso a paso..."
+          [class.input-error]="form.get('descripcion')?.invalid && form.get('descripcion')?.touched"
+        ></textarea>
+        <span class="field-hint" *ngIf="form.get('descripcion')?.invalid && form.get('descripcion')?.touched">
+          Minimo 10 caracteres
+        </span>
+      </div>
+
+      <div class="action-bar">
+        <button
+          class="btn btn-record"
+          type="button"
+          (click)="toggleGrabacion()"
+          [class.btn-record--active]="grabando"
+        >
+          <span class="record-dot" *ngIf="grabando"></span>
+          {{ grabando ? 'Detener grabacion' : 'Grabar descripcion' }}
+        </button>
+
+        <div class="action-primary">
+          <button
+            class="btn btn-secondary"
+            type="button"
+            (click)="crearManualmente()"
+            [disabled]="form.invalid"
+          >
+            Crear manualmente
+          </button>
+          <button
+            class="btn btn-primary"
+            type="button"
+            (click)="crearConIa()"
+            [disabled]="form.invalid"
+          >
+            Crear con IA
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="progress-card" *ngIf="enProgreso || progreso === 'listo'">
+    <div class="progress-steps">
+      <div class="step" [class.step--active]="progreso === 'creando'" [class.step--done]="['analizando','generando','guardando','listo'].includes(progreso)">
+        <div class="step-dot"></div>
+        <span>Creando politica...</span>
+      </div>
+      <div class="step" [class.step--active]="progreso === 'analizando'" [class.step--done]="['generando','guardando','listo'].includes(progreso)">
+        <div class="step-dot"></div>
+        <span>Analizando descripcion con IA...</span>
+      </div>
+      <div class="step" [class.step--active]="progreso === 'generando'" [class.step--done]="['guardando','listo'].includes(progreso)">
+        <div class="step-dot"></div>
+        <span>Generando diagrama...</span>
+      </div>
+      <div class="step" [class.step--active]="progreso === 'guardando'" [class.step--done]="progreso === 'listo'">
+        <div class="step-dot"></div>
+        <span>Guardando diagrama...</span>
+      </div>
+      <div class="step step--success" [class.step--done]="progreso === 'listo'">
+        <div class="step-dot"></div>
+        <span>Diagrama generado! Abriendo editor...</span>
+      </div>
+    </div>
+
+    <div class="spinner-wrap" *ngIf="enProgreso">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
