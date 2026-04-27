@@ -51,4 +51,3 @@ Thumbs.db
 npm-debug.log*
 
 # Environment
-src/environments/environment.prod.ts
