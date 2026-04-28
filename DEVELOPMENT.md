@@ -401,6 +401,48 @@ export class DepartamentoFormComponent {
 
 ---
 
+## Editor de Diagramas — JointJS
+
+El editor usa `@joint/core` para el canvas de drag & drop.
+
+### Archivos clave
+
+| Archivo | Responsabilidad |
+|---------|----------------|
+| `editor-diagrama.component.ts` | Lógica principal: crear nodos, conectar, guardar, llamar IA |
+| `uml-shapes.constants.ts` | Definición visual de cada tipo de nodo (color, tamaño, puertos) |
+| `diagram-layout.util.ts` | Cálculo de posición X/Y automática (al generar con IA) |
+| `diagram-validators.ts` | Reglas UML: nodo conectado, 1 INICIO, DECISION con 2 salidas |
+
+### Cambiar el aspecto visual de un tipo de nodo
+
+En `uml-shapes.constants.ts` buscar el tipo de nodo (TAREA, DECISION, INICIO, FIN, PARALELO) y modificar sus propiedades de color, tamaño o forma. JointJS usa un modelo de atributos SVG.
+
+### Agregar un nuevo tipo de nodo
+
+1. Agregar el tipo en `uml-shapes.constants.ts`
+2. Agregar la validación en `diagram-validators.ts`
+3. Agregar el manejo en `editor-diagrama.component.ts` (menú, creación, guardado)
+4. Agregar el tipo en el backend: `Nodo.java` (enum `TipoNodo`)
+
+---
+
+## Reconocimiento de Voz (Speech API)
+
+Implementado en dos lugares con la misma lógica:
+
+1. `nueva-politica.component.ts` — Para dictar la descripción del proceso
+2. `editor-diagrama.component.ts` — Para dar instrucciones al editor
+
+**Solo funciona en Chrome y Edge.** Firefox no soporta `webkitSpeechRecognition`.
+
+El idioma está fijo en `'es-BO'`. Para cambiarlo:
+```typescript
+this.recognition.lang = 'es-BO';  // Cambiar aquí
+```
+
+---
+
 ## Comandos de referencia rápida
 
 ```bash

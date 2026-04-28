@@ -17,9 +17,11 @@ Panel de administración web del sistema **WorkflowManager**, construido con Ang
 | @stomp/stompjs | 7.x | WebSockets (STOMP sobre SockJS) |
 | sockjs-client | 1.x | Fallback para WebSockets |
 | jwt-decode | 4.x | Decodificación de JWT en cliente |
+| @joint/core | 4.x | Canvas de diagramas con drag & drop |
 | html2canvas | 1.x | Exportar diagrama como imagen |
 | jsPDF | 2.x | Exportar diagrama como PDF |
 | RxJS | 7.x | Programación reactiva |
+| Web Speech API | (nativa browser) | Reconocimiento de voz (Chrome/Edge) |
 
 ---
 
@@ -101,33 +103,36 @@ src/
 │   │   ├── admin/                      ← ADMIN_GENERAL
 │   │   │   ├── pages/
 │   │   │   │   ├── dashboard/
-│   │   │   │   ├── empresas/
 │   │   │   │   ├── departamentos/
 │   │   │   │   ├── usuarios/
+│   │   │   │   ├── formularios/
 │   │   │   │   ├── politicas/
-│   │   │   │   │   ├── lista/
-│   │   │   │   │   ├── editor-diagrama/ ← Canvas drag & drop
-│   │   │   │   │   └── monitor/         ← Verde/amarillo/rojo
-│   │   │   │   └── tramites/
-│   │   │   ├── models/
-│   │   │   ├── services/
-│   │   │   └── admin.routes.ts
+│   │   │   │   │   ├── politicas.component     ← Lista de políticas
+│   │   │   │   │   ├── nueva-politica/         ← Crear con IA + voz
+│   │   │   │   │   └── editor-diagrama/        ← Canvas JointJS drag & drop
+│   │   │   │   │       ├── editor-diagrama.component  ← Principal
+│   │   │   │   │       ├── uml-shapes.constants.ts    ← Colores y formas de nodos
+│   │   │   │   │       ├── diagram-layout.util.ts     ← Auto-posicionamiento
+│   │   │   │   │       └── diagram-validators.ts      ← Validaciones UML
+│   │   │   │   ├── monitor/            ← Tiempo real (verde/amarillo/rojo)
+│   │   │   │   ├── tramites/
+│   │   │   │   │   └── tramite-detalle/
+│   │   │   │   └── analisis/           ← Cuellos de botella con ML
+│   │   │   └── admin-layout.component.ts
 │   │   │
 │   │   ├── admin-depto/                ← ADMIN_DEPARTAMENTO
 │   │   │   ├── pages/
+│   │   │   │   ├── dashboard/
 │   │   │   │   ├── formularios/
 │   │   │   │   └── tramites/
-│   │   │   ├── models/
-│   │   │   ├── services/
-│   │   │   └── admin-depto.routes.ts
+│   │   │   └── admin-depto-layout.component.ts
 │   │   │
 │   │   └── funcionario/                ← FUNCIONARIO
 │   │       ├── pages/
+│   │       │   ├── dashboard/
 │   │       │   ├── tareas/
-│   │       │   └── ejecutar-tarea/
-│   │       ├── models/
-│   │       ├── services/
-│   │       └── funcionario.routes.ts
+│   │       │   └── ejecutar-tarea/     ← Formulario dinámico por tipo de campo
+│   │       └── funcionario-layout.component.ts
 │   │
 │   ├── app.component.ts
 │   ├── app.config.ts
@@ -168,11 +173,13 @@ El sistema usa un tema militar/oliva oscuro:
 
 ## Módulos y acceso por rol
 
-| Módulo | Rol requerido | Acceso |
-|--------|---------------|--------|
-| `/admin` | `ADMIN_GENERAL` | Dashboard, empresas, departamentos, usuarios, políticas, monitor |
-| `/admin-depto` | `ADMIN_DEPARTAMENTO` | Formularios de su departamento, trámites de su área |
-| `/funcionario` | `FUNCIONARIO` | Lista de tareas pendientes, ejecutar tareas |
+| Módulo | Rol requerido | Páginas disponibles |
+|--------|---------------|---------------------|
+| `/admin` | `ADMIN_GENERAL` | Dashboard, departamentos, usuarios, formularios, políticas (lista + nueva + editor), monitor, trámites, análisis IA |
+| `/admin-depto` | `ADMIN_DEPARTAMENTO` | Dashboard, formularios del departamento, trámites del área |
+| `/funcionario` | `FUNCIONARIO` | Dashboard, mis tareas, ejecutar tarea |
+
+> Ver [GUIA_ARCHIVOS.md](GUIA_ARCHIVOS.md) para el mapa detallado de qué archivo controla cada sección de cada página.
 
 ---
 
@@ -185,17 +192,19 @@ El sistema usa un tema militar/oliva oscuro:
 
 ---
 
-## Despliegue en Azure
+## Despliegue en producción
 
 ```bash
 # Build de producción
 ng build --configuration production
+# Genera la carpeta dist/ con los archivos estáticos
 
-# Deploy en Azure Static Web Apps (con Azure CLI)
-az staticwebapp deploy \
-  --name wm-frontend \
-  --resource-group rg-workflow-parcial \
-  --source ./dist/workflow-front
+# Servir los estáticos con cualquier servidor (Nginx, Apache, Netlify, Vercel, etc.)
+```
+
+Cambiar la URL del backend para producción en:
+```
+src/environments/environment.production.ts
 ```
 
 ---
