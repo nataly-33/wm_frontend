@@ -96,4 +96,23 @@ export class PoliticaService {
   guardarDiagrama(id: string, request: GuardarDiagramaRequest): Observable<ApiResponse<Politica>> {
     return this.http.put<ApiResponse<Politica>>(`${this.baseUrl}/${id}/diagrama`, request);
   }
+
+  obtenerHistorial(id: string): Observable<ApiResponse<VersionHistorial[]>> {
+    return this.http.get<ApiResponse<VersionHistorial[]>>(`${this.baseUrl}/${id}/historial`);
+  }
+}
+
+export interface VersionHistorial {
+  id: string;
+  version: number;
+  hash: string;
+  cambiadoPor: string;
+  nombreCambiadoPor: string;
+  fechaCambio: string;
+  tipoAccion: 'CREAR' | 'DIAGRAMA' | 'EDITAR' | 'ACTIVAR' | 'DESACTIVAR';
+  descripcion: string;
+  nombrePolitica: string;
+  estadoResultante: string;
+  nNodos: number;
+  nTransiciones: number;
 }

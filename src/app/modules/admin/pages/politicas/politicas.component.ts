@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
-import { CrearPoliticaRequest, Politica, PoliticaService } from '../../../../core/services/politica.service';
+import { CrearPoliticaRequest, Politica, PoliticaService, VersionHistorial } from '../../../../core/services/politica.service';
 import { TramiteService } from '../../../../core/services/tramite.service';
 
 @Component({
@@ -25,6 +25,28 @@ export class PoliticasComponent implements OnInit {
   mostrarModalTramite = false;
   editandoId: string | null = null;
   politicaSeleccionada: Politica | null = null;
+
+  // Historial de versiones
+  mostrarHistorial = false;
+  historial: VersionHistorial[] = [];
+  cargandoHistorial = false;
+  politicaHistorial: Politica | null = null;
+
+  readonly ACCION_ICONS: Record<string, string> = {
+    CREAR:      '✦',
+    DIAGRAMA:   '⬡',
+    EDITAR:     '✎',
+    ACTIVAR:    '▶',
+    DESACTIVAR: '■'
+  };
+
+  readonly ACCION_LABEL: Record<string, string> = {
+    CREAR:      'Creación',
+    DIAGRAMA:   'Diagrama guardado',
+    EDITAR:     'Edición de datos',
+    ACTIVAR:    'Política activada',
+    DESACTIVAR: 'Política desactivada'
+  };
 
   constructor(
     private politicaService: PoliticaService,
@@ -66,10 +88,7 @@ export class PoliticasComponent implements OnInit {
     this.error = null;
     if (politica) {
       this.editandoId = politica.id;
-      this.form.patchValue({
-        nombre: politica.nombre,
-        descripcion: politica.descripcion
-      });
+      this.form.patchValue({ nombre: politica.nombre, descripcion: politica.descripcion });
       this.mostrarModal = true;
     } else {
       this.router.navigate(['/admin/politicas/nueva']);
@@ -78,7 +97,9 @@ export class PoliticasComponent implements OnInit {
 
   cerrarModal(): void {
     this.mostrarModal = false;
+    this.editandoId = null;
     this.form.reset();
+    this.error = null;
   }
 
   guardar(): void {
@@ -118,9 +139,7 @@ export class PoliticasComponent implements OnInit {
   }
 
   eliminar(politicaId: string): void {
-    if (!confirm('Se eliminara la politica. Deseas continuar?')) {
-      return;
-    }
+    if (!confirm('Se eliminara la politica. Deseas continuar?')) return;
     this.politicaService.eliminar(politicaId).subscribe({
       next: () => this.cargar(),
       error: (err: { error?: { message?: string } }) => {
@@ -139,6 +158,35 @@ export class PoliticasComponent implements OnInit {
     return 'badge badge--info';
   }
 
+  // ── Historial de versiones ────────────────────────────────────────
+  verHistorial(politica: Politica): void {
+    this.politicaHistorial = politica;
+    this.historial = [];
+    this.mostrarHistorial = true;
+    this.cargandoHistorial = true;
+    this.politicaService.obtenerHistorial(politica.id)
+      .pipe(finalize(() => this.cargandoHistorial = false))
+      .subscribe({
+        next: (res) => { this.historial = res.data ?? []; },
+        error: () => { this.historial = []; }
+      });
+  }
+
+  cerrarHistorial(): void {
+    this.mostrarHistorial = false;
+    this.politicaHistorial = null;
+    this.historial = [];
+  }
+
+  getAccionClass(accion: string): string {
+    const m: Record<string, string> = {
+      CREAR: 'accion-crear', DIAGRAMA: 'accion-diagrama',
+      EDITAR: 'accion-editar', ACTIVAR: 'accion-activar', DESACTIVAR: 'accion-desactivar'
+    };
+    return m[accion] ?? '';
+  }
+
+  // ── Trámites ─────────────────────────────────────────────────────
   abrirModalTramite(politica: Politica): void {
     this.error = null;
     this.politicaSeleccionada = politica;
@@ -169,7 +217,6 @@ export class PoliticasComponent implements OnInit {
         this.guardando = false;
         this.cerrarModalTramite();
         this.error = null;
-        alert('Trámite iniciado correctamente');
       },
       error: (err: { error?: { message?: string } }) => {
         this.guardando = false;

@@ -3,14 +3,12 @@
     <div>
       <h1 class="page-title">Politicas de negocio</h1>
     </div>
-    <button class="btn btn-primary" (click)="abrirModal()">
-      Nueva politica
-    </button>
+    <button class="btn btn-primary" (click)="abrirModal()">Nueva politica</button>
   </div>
 
   <div *ngIf="error" class="alert alert-error">
     <span>{{ error }}</span>
-    <button class="alert-close" (click)="error = null">x</button>
+    <button class="alert-close" (click)="error = null">×</button>
   </div>
 
   <div *ngIf="cargando" class="loading-state">
@@ -26,7 +24,7 @@
       </header>
       <p>{{ politica.descripcion }}</p>
       <div class="meta">
-        <span>Version {{ politica.version }}</span>
+        <span class="version-badge">v{{ politica.version }}</span>
         <span>{{ politica.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
       </div>
       <div class="actions">
@@ -34,12 +32,13 @@
         <button class="btn btn-secondary" (click)="cambiarEstado(politica)">
           {{ politica.estado === 'ACTIVA' ? 'Desactivar' : 'Activar' }}
         </button>
-        <button class="btn btn-primary" (click)="irEditor(politica.id)">Editor de diagrama</button>
-        <button 
-          class="btn btn-success" 
-          (click)="abrirModalTramite(politica)"
-          [disabled]="politica.estado !== 'ACTIVA'">
-          Iniciar trámite
+        <button class="btn btn-primary" (click)="irEditor(politica.id)">Editor diagrama</button>
+        <button class="btn btn-success" (click)="abrirModalTramite(politica)"
+                [disabled]="politica.estado !== 'ACTIVA'">
+          Iniciar tramite
+        </button>
+        <button class="btn btn-historial" (click)="verHistorial(politica)" title="Ver historial de versiones">
+          Historial
         </button>
         <button class="btn btn-danger" (click)="eliminar(politica.id)">Eliminar</button>
       </div>
@@ -48,15 +47,16 @@
 
   <div *ngIf="!cargando && politicas.length === 0" class="empty-state">
     <h3>No hay politicas registradas</h3>
-    <p>Crea la primera politica para continuar con Dia 4</p>
+    <p>Crea la primera politica para comenzar.</p>
   </div>
 </div>
 
+<!-- Modal: Editar política -->
 <div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
   <div class="modal-dialog" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>{{ editandoId ? 'Editar politica' : 'Nueva politica' }}</h2>
-      <button class="btn-close-modal" (click)="cerrarModal()">x</button>
+      <button class="btn-close-modal" (click)="cerrarModal()">×</button>
     </div>
     <form class="modal-form" [formGroup]="form" (ngSubmit)="guardar()">
       <div class="form-group">
@@ -77,15 +77,16 @@
   </div>
 </div>
 
+<!-- Modal: Iniciar trámite -->
 <div class="modal-overlay" *ngIf="mostrarModalTramite" (click)="cerrarModalTramite()">
   <div class="modal-dialog" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Iniciar trámite - {{ politicaSeleccionada?.nombre }}</h2>
-      <button class="btn-close-modal" (click)="cerrarModalTramite()">x</button>
+      <h2>Iniciar tramite — {{ politicaSeleccionada?.nombre }}</h2>
+      <button class="btn-close-modal" (click)="cerrarModalTramite()">×</button>
     </div>
     <form class="modal-form" [formGroup]="formTramite" (ngSubmit)="iniciarTramite()">
       <div class="form-group">
-        <label class="form-label">Título del trámite</label>
+        <label class="form-label">Título del tramite</label>
         <input class="form-input" formControlName="titulo" placeholder="Ej: Instalación - Juan Pérez" />
       </div>
       <div class="form-group">
@@ -97,15 +98,83 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Fecha límite</label>
+        <label class="form-label">Fecha limite</label>
         <input class="form-input" type="date" formControlName="fechaLimite" />
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" type="button" (click)="cerrarModalTramite()">Cancelar</button>
         <button class="btn btn-primary" type="submit" [disabled]="guardando || formTramite.invalid">
-          {{ guardando ? 'Iniciando...' : 'Iniciar trámite' }}
+          {{ guardando ? 'Iniciando...' : 'Iniciar tramite' }}
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal: Historial de versiones -->
+<div class="modal-overlay" *ngIf="mostrarHistorial" (click)="cerrarHistorial()">
+  <div class="modal-dialog historial-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Historial de versiones</h2>
+        <p class="historial-subtitle">{{ politicaHistorial?.nombre }}</p>
+      </div>
+      <button class="btn-close-modal" (click)="cerrarHistorial()">×</button>
+    </div>
+
+    <div class="historial-body">
+      <div *ngIf="cargandoHistorial" class="loading-inline">Cargando historial...</div>
+
+      <div *ngIf="!cargandoHistorial && historial.length === 0" class="empty-historial">
+        Sin registros todavia. El historial se crea automaticamente al editar o activar la politica.
+      </div>
+
+      <div class="timeline" *ngIf="!cargandoHistorial && historial.length > 0">
+        <div class="timeline-entry" *ngFor="let entrada of historial; let ultimo = last"
+             [class.timeline-last]="ultimo">
+
+          <!-- Linea e ícono -->
+          <div class="timeline-left">
+            <div class="timeline-dot" [class]="getAccionClass(entrada.tipoAccion)">
+              {{ ACCION_ICONS[entrada.tipoAccion] }}
+            </div>
+            <div class="timeline-line" *ngIf="!ultimo"></div>
+          </div>
+
+          <!-- Contenido -->
+          <div class="timeline-card">
+            <div class="timeline-head">
+              <span class="accion-label" [class]="getAccionClass(entrada.tipoAccion)">
+                {{ ACCION_LABEL[entrada.tipoAccion] }}
+              </span>
+              <span class="version-num">v{{ entrada.version }}</span>
+              <span class="timeline-fecha">{{ entrada.fechaCambio | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+
+            <p class="timeline-desc">{{ entrada.descripcion }}</p>
+
+            <div class="timeline-meta">
+              <span class="meta-item">
+                <strong>Por:</strong> {{ entrada.nombreCambiadoPor || 'Sistema' }}
+              </span>
+              <span class="meta-item" *ngIf="entrada.nNodos">
+                <strong>Nodos:</strong> {{ entrada.nNodos }}
+              </span>
+              <span class="meta-item" *ngIf="entrada.nTransiciones">
+                <strong>Transiciones:</strong> {{ entrada.nTransiciones }}
+              </span>
+              <span class="meta-item estado-chip estado-{{ entrada.estadoResultante?.toLowerCase() }}">
+                {{ entrada.estadoResultante }}
+              </span>
+            </div>
+
+            <div class="hash-row" title="Hash SHA-256 del estado en este momento">
+              <span class="hash-icon">#</span>
+              <code class="hash-code">{{ entrada.hash }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
