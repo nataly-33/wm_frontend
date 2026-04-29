@@ -5,11 +5,12 @@ import { SidebarComponent, SidebarItem } from '../../shared/components/sidebar/s
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { UserManualComponent } from '../../shared/components/user-manual/user-manual.component';
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, NavbarComponent, CommonModule],
+  imports: [RouterOutlet, SidebarComponent, NavbarComponent, CommonModule, UserManualComponent],
   template: `
     <div class="admin-shell">
       <app-sidebar [items]="menuItems"></app-sidebar>
@@ -19,6 +20,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
           <router-outlet></router-outlet>
         </main>
       </div>
+      <app-user-manual></app-user-manual>
     </div>
   `,
   styles: [`

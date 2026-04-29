@@ -1,0 +1,446 @@
+// =============================================
+// BOTÓN FLOTANTE FAB
+// =============================================
+.help-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #41a05e, #4a8549);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(62, 149, 67, 0.5);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+
+  &:hover {
+    transform: scale(1.12) rotate(5deg);
+    box-shadow: 0 8px 32px rgba(31, 63, 23, 0.7);
+  }
+
+  &.active {
+    transform: scale(1.05) rotate(45deg);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 4px 24px rgba(239, 68, 68, 0.5);
+  }
+
+  .fab-icon {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    font-family: 'Georgia', serif;
+  }
+
+  .fab-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(99, 241, 130, 0.4);
+    animation: pulse-ring 2s ease-out infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+// =============================================
+// BACKDROP
+// =============================================
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+// =============================================
+// PANEL PRINCIPAL
+// =============================================
+.help-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 32px;
+  z-index: 9995;
+  width: 480px;
+  max-width: calc(100vw - 48px);
+  max-height: 85vh;
+  background: #13141f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  @media (max-width: 540px) {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// =============================================
+// HEADER
+// =============================================
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 2px solid #46c171;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.3s;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-icon {
+    font-size: 28px;
+  }
+
+  .header-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0;
+  }
+
+  .header-step {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 2px 0 0;
+    font-weight: 600;
+  }
+
+  .btn-close {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+  }
+}
+
+// =============================================
+// PROGRESS BAR
+// =============================================
+.progress-bar-wrap {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #4dbe60;
+    transition: width 0.4s ease, background 0.3s;
+    border-radius: 0 2px 2px 0;
+  }
+}
+
+// =============================================
+// DOTS
+// =============================================
+.steps-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px 0;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.3s;
+    flex-shrink: 0;
+
+    &.active {
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(1.2);
+    }
+  }
+}
+
+// =============================================
+// CONTENIDO DEL PASO
+// =============================================
+.step-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  transition: opacity 0.3s;
+
+  &.animating {
+    opacity: 0;
+  }
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+}
+
+.step-image-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  .step-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s;
+
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  .image-glow {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(transparent, #6366f133);
+    transition: background 0.3s;
+  }
+}
+
+.step-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.step-desc {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+// =============================================
+// TIPS
+// =============================================
+.tips-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  .tips-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 0 0 10px;
+
+    svg {
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+  }
+
+  .tips-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.5;
+    }
+
+    .tip-num {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #63f163;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+      transition: background 0.3s;
+    }
+  }
+}
+
+// =============================================
+// FOOTER NAV
+// =============================================
+.panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.2);
+  gap: 8px;
+
+  .btn-nav {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    &.btn-next {
+      background: #49ae54;
+      border-color: transparent;
+      color: #fff;
+      transition: background 0.3s, transform 0.2s, opacity 0.2s;
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+        transform: translateX(2px);
+      }
+    }
+  }
+
+  .footer-menu {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .menu-item {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+      }
+
+      &.active {
+        background: rgba(99, 102, 241, 0.25);
+        border-color: rgba(99, 102, 241, 0.5);
+        transform: translateY(-2px);
+      }
+    }
+  }
+}

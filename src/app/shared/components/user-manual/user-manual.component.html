@@ -1,0 +1,138 @@
+<!-- Botón flotante de ayuda -->
+<button
+  class="help-fab"
+  (click)="toggle()"
+  [class.active]="isOpen"
+  id="help-fab-btn"
+  aria-label="Abrir manual de usuario"
+  title="Manual de usuario"
+>
+  <span class="fab-icon" *ngIf="!isOpen">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </span>
+  <span class="fab-icon" *ngIf="isOpen">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </span>
+  <span class="fab-pulse"></span>
+</button>
+
+<!-- Backdrop -->
+<div class="help-backdrop" *ngIf="isOpen" (click)="close()"></div>
+
+<!-- Panel principal -->
+<div class="help-panel" [class.open]="isOpen" *ngIf="isOpen">
+
+  <!-- Header del panel -->
+  <div class="panel-header" [style.border-color]="currentStepData.color">
+    <div class="header-left">
+      <span class="header-icon">
+        <ng-container [ngSwitch]="currentStepData.icono">
+          <svg *ngSwitchCase="'dashboard'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <svg *ngSwitchCase="'politicas'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <svg *ngSwitchCase="'editor'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          <svg *ngSwitchCase="'cuello'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg *ngSwitchCase="'tramites'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <svg *ngSwitchCase="'monitor'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <svg *ngSwitchDefault width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </ng-container>
+      </span>
+      <div>
+        <p class="header-label">Manual de Usuario</p>
+        <p class="header-step">Paso {{ currentStep + 1 }} de {{ steps.length }}</p>
+      </div>
+    </div>
+    <button class="btn-close" (click)="close()" aria-label="Cerrar">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Barra de progreso -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" [style.width.%]="progress" [style.background]="currentStepData.color"></div>
+  </div>
+
+  <!-- Dots navegación rápida -->
+  <div class="steps-dots">
+    <button
+      *ngFor="let step of steps; let i = index"
+      class="dot"
+      [class.active]="i === currentStep"
+      [style.background]="i === currentStep ? currentStepData.color : ''"
+      (click)="goTo(i)"
+      [title]="step.titulo"
+    ></button>
+  </div>
+
+  <!-- Contenido del paso -->
+  <div class="step-content" [class.animating]="isAnimating">
+
+    <!-- Imagen ilustrativa -->
+    <div class="step-image-wrap">
+      <img
+        [src]="currentStepData.imagen"
+        [alt]="currentStepData.titulo"
+        class="step-image"
+        loading="lazy"
+      />
+      <div class="image-glow" [style.background]="currentStepData.color + '33'"></div>
+    </div>
+
+    <!-- Título y descripción -->
+    <h2 class="step-title">{{ currentStepData.titulo }}</h2>
+    <p class="step-desc">{{ currentStepData.descripcion }}</p>
+
+    <!-- Tips -->
+    <div class="tips-section">
+      <p class="tips-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Pasos a seguir
+      </p>
+      <ul class="tips-list">
+        <li *ngFor="let tip of currentStepData.tips; let i = index">
+          <span class="tip-num" [style.background]="currentStepData.color">{{ i + 1 }}</span>
+          <span>{{ tip }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Footer con navegación -->
+  <div class="panel-footer">
+    <button
+      class="btn-nav btn-prev"
+      (click)="prev()"
+      [disabled]="currentStep === 0"
+    >
+      Anterior
+    </button>
+
+    <div class="footer-menu">
+      <button
+        *ngFor="let step of steps; let i = index"
+        class="menu-item"
+        [class.active]="i === currentStep"
+        (click)="goTo(i)"
+        [title]="step.titulo"
+      >
+        <ng-container [ngSwitch]="step.icono">
+          <svg *ngSwitchCase="'dashboard'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <svg *ngSwitchCase="'politicas'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <svg *ngSwitchCase="'editor'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          <svg *ngSwitchCase="'cuello'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg *ngSwitchCase="'tramites'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <svg *ngSwitchCase="'monitor'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <svg *ngSwitchDefault width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+        </ng-container>
+      </button>
+    </div>
+
+    <button
+      class="btn-nav btn-next"
+      (click)="next()"
+      [disabled]="currentStep === steps.length - 1"
+      [style.background]="currentStepData.color"
+    >
+      Siguiente
+    </button>
+  </div>
+</div>
