@@ -17,9 +17,11 @@ export interface EjecucionNodo {
   completadoEn?: Date;
   observaciones?: string;
 
-  // Virtual properties for UI
+  // Virtual properties populated by the backend on single-fetch
   tramiteTitulo?: string;
   prioridad?: string;
+  nombreNodo?: string;
+  nombrePolitica?: string;
 }
 
 export interface EjecucionDetallada {

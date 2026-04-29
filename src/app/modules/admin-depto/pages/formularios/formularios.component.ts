@@ -84,6 +84,22 @@ export class FormulariosComponent implements OnInit, OnDestroy {
     return this.form.get('campos') as FormArray;
   }
 
+  readonly TIPOS_CON_OPCIONES = ['SELECCION', 'RADIO', 'CHECKBOX'];
+  readonly TIPOS_SIN_INPUT   = ['ETIQUETA'];
+
+  tieneOpciones(ctrl: any): boolean {
+    return this.TIPOS_CON_OPCIONES.includes(ctrl.get('tipo')?.value);
+  }
+  esEtiqueta(ctrl: any): boolean {
+    return ctrl.get('tipo')?.value === 'ETIQUETA';
+  }
+  esTextarea(ctrl: any): boolean {
+    return ctrl.get('tipo')?.value === 'TEXTAREA';
+  }
+  esGrid(ctrl: any): boolean {
+    return ctrl.get('tipo')?.value === 'GRID';
+  }
+
   agregarCampo(): void {
     this.campos.push(
       this.fb.group({
@@ -92,7 +108,9 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         tipo: ['TEXTO', Validators.required],
         requerido: [true],
         esCampoPrioridad: [false],
-        opcionesRaw: ['']
+        opcionesRaw: [''],
+        filas: [3],
+        columnasRaw: ['']
       })
     );
   }
@@ -133,7 +151,9 @@ export class FormulariosComponent implements OnInit, OnDestroy {
             tipo: [c.tipo, Validators.required],
             requerido: [c.requerido],
             esCampoPrioridad: [c.esCampoPrioridad],
-            opcionesRaw: [(c.opciones ?? []).join(',')]
+            opcionesRaw: [(c.opciones ?? []).join(',')],
+            filas: [c.filas ?? 3],
+            columnasRaw: [(c.columnas ?? []).join(',')]
           })
         );
       });
@@ -234,7 +254,9 @@ export class FormulariosComponent implements OnInit, OnDestroy {
           tipo: [c.tipo, Validators.required],
           requerido: [c.requerido],
           esCampoPrioridad: [c.esCampoPrioridad],
-          opcionesRaw: [(c.opciones ?? []).join(',')]
+          opcionesRaw: [(c.opciones ?? []).join(',')],
+          filas: [c.filas ?? 3],
+          columnasRaw: [(c.columnas ?? []).join(',')]
         })
       );
     });
@@ -261,7 +283,11 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         opciones: (ctrl.value.opcionesRaw ?? '')
           .split(',')
           .map((v: string) => v.trim())
-          .filter((v: string) => v.length > 0)
+          .filter((v: string) => v.length > 0),
+        filas: ctrl.value.tipo === 'TEXTAREA' ? (ctrl.value.filas ?? 3) : null,
+        columnas: ctrl.value.tipo === 'GRID'
+          ? (ctrl.value.columnasRaw ?? '').split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0)
+          : null
       }))
     };
 

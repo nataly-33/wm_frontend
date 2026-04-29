@@ -70,38 +70,90 @@
         </select>
       </div>
 
+      <!-- Botón Sugerir con IA — aparece cuando hay nodo seleccionado -->
+      <div class="ia-bar" *ngIf="form.value.nodoId">
+        <button type="button" class="btn-ia" (click)="sugerirCamposConIa()" [disabled]="sugiriendoIa">
+          <span *ngIf="!sugiriendoIa">✦ Sugerir campos con IA</span>
+          <span *ngIf="sugiriendoIa">Generando campos...</span>
+        </button>
+        <span class="ia-msg" *ngIf="mensajeIa" [class.ia-ok]="!mensajeIa.includes('Error') && !mensajeIa.includes('error')">
+          {{ mensajeIa }}
+        </span>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Nombre del formulario</label>
-        <input class="form-input" formControlName="nombre" />
+        <input class="form-input" formControlName="nombre" placeholder="Ej. Formulario de inspección técnica" />
       </div>
 
       <div formArrayName="campos" class="campo-list">
         <div class="campo-item" *ngFor="let campo of campos.controls; let i = index" [formGroupName]="i">
-          <input class="form-input" formControlName="nombre" placeholder="nombre técnico" />
-          <input class="form-input" formControlName="etiqueta" placeholder="etiqueta" />
 
-          <select class="form-input" formControlName="tipo">
-            <option value="TEXTO">TEXTO</option>
-            <option value="NUMERO">NUMERO</option>
-            <option value="FECHA">FECHA</option>
-            <option value="SELECCION">SELECCION</option>
-            <option value="ARCHIVO">ARCHIVO</option>
-            <option value="IMAGEN">IMAGEN</option>
-          </select>
+          <div class="campo-row-top">
+            <input class="form-input" formControlName="nombre" placeholder="nombre_tecnico" />
+            <input class="form-input" formControlName="etiqueta" placeholder="Etiqueta visible" />
+            <select class="form-input" formControlName="tipo">
+              <optgroup label="Texto">
+                <option value="TEXTO">Texto corto</option>
+                <option value="TEXTAREA">Área de texto</option>
+                <option value="ETIQUETA">Etiqueta (solo texto)</option>
+              </optgroup>
+              <optgroup label="Numérico y fecha">
+                <option value="NUMERO">Número</option>
+                <option value="FECHA">Fecha</option>
+              </optgroup>
+              <optgroup label="Selección">
+                <option value="SELECCION">Selector desplegable</option>
+                <option value="RADIO">Botones de opción (Radio)</option>
+                <option value="CHECKBOX">Casillas (Checkbox)</option>
+              </optgroup>
+              <optgroup label="Archivos">
+                <option value="ARCHIVO">Archivo</option>
+                <option value="IMAGEN">Imagen</option>
+              </optgroup>
+              <optgroup label="Tabla">
+                <option value="GRID">Tabla/Grid</option>
+              </optgroup>
+            </select>
+          </div>
 
-          <input class="form-input" formControlName="opcionesRaw" placeholder="opciones: A,B,C" />
+          <!-- Opciones — SELECCION, RADIO, CHECKBOX -->
+          <div class="campo-extra" *ngIf="tieneOpciones(campo)">
+            <input class="form-input" formControlName="opcionesRaw"
+                   placeholder="Opciones separadas por coma: Aprobado,Rechazado" />
+          </div>
 
-          <label><input type="checkbox" formControlName="requerido" /> Requerido</label>
-          <label><input type="checkbox" formControlName="esCampoPrioridad" /> Prioridad</label>
+          <!-- Filas — TEXTAREA -->
+          <div class="campo-extra" *ngIf="esTextarea(campo)">
+            <label class="campo-mini-label">Filas:</label>
+            <input class="form-input campo-input-sm" type="number" formControlName="filas" min="2" max="10" />
+          </div>
 
-          <button type="button" class="btn btn-danger mini" (click)="quitarCampo(i)">Quitar</button>
+          <!-- Columnas — GRID -->
+          <div class="campo-extra" *ngIf="esGrid(campo)">
+            <input class="form-input" formControlName="columnasRaw"
+                   placeholder="Columnas separadas por coma: Descripción,Cantidad,Precio (Bs)" />
+          </div>
+
+          <div class="campo-row-bottom">
+            <label *ngIf="!esEtiqueta(campo)"><input type="checkbox" formControlName="requerido" /> Requerido</label>
+            <label *ngIf="!esEtiqueta(campo)"><input type="checkbox" formControlName="esCampoPrioridad" /> Campo prioridad</label>
+            <button type="button" class="btn btn-danger mini" (click)="quitarCampo(i)">Quitar</button>
+          </div>
+
         </div>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn btn-secondary" (click)="agregarCampo()">Agregar campo</button>
+        <button type="button" class="btn btn-secondary" (click)="agregarCampo()">+ Agregar campo</button>
         <button type="submit" class="btn btn-primary" [disabled]="guardando">
           {{ guardando ? 'Guardando...' : (modo === 'editar' ? 'Actualizar' : 'Crear') }}
+        </button>
+        <button *ngIf="modo === 'editar' && formularioActual"
+                type="button" class="btn btn-danger"
+                (click)="eliminarFormulario({ nodoId: form.value.nodoId, nodoNombre: '', politicaId: form.value.politicaId, politicaNombre: '', formulario: formularioActual })"
+                [disabled]="eliminando">
+          {{ eliminando ? 'Eliminando...' : 'Eliminar' }}
         </button>
       </div>
     </form>

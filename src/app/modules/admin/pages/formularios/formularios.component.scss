@@ -82,15 +82,85 @@
   gap: 10px;
 }
 
+// ── IA bar ───────────────────────────────────────────────────────────
+.ia-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--bg-panel, #242410);
+  border: 1px solid var(--primary-400, #565620);
+  border-radius: 8px;
+}
+
+.btn-ia {
+  padding: 8px 18px;
+  border: 1px solid var(--primary-300, #7A7A40);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--primary-100, #C0C080);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+  &:hover:not(:disabled) {
+    background: var(--primary-400, #565620);
+    color: var(--text-primary);
+  }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+.ia-msg {
+  font-size: 12px;
+  color: var(--danger, #f44250);
+  &.ia-ok { color: var(--success, #6bd968); }
+}
+
+// ── Campo item ────────────────────────────────────────────────────────
 .campo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-card, #2e2e14);
+  border: 1px solid var(--border, #565620);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-primary);
+}
+
+.campo-row-top {
   display: grid;
-  grid-template-columns: repeat(4, 1fr) auto auto auto;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   align-items: center;
-  background: #fff;
-  border: 1px solid #dce5d4;
-  border-radius: 10px;
-  padding: 10px;
+}
+
+.campo-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.campo-mini-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.campo-input-sm {
+  width: 80px !important;
+}
+
+.campo-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid var(--border, #565620);
+  label { color: var(--text-muted); font-size: 13px; }
 }
 
 .actions {

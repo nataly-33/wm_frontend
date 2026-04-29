@@ -4,12 +4,14 @@
   <div class="page-header">
     <button class="btn btn-secondary" routerLink="/funcionario/tareas">Volver</button>
     <div>
-      <h1 class="page-title">Ejecutar Tarea</h1>
+      <h1 class="page-title">{{ tarea?.nombreNodo || 'Ejecutar Tarea' }}</h1>
+      <p class="page-subtitle" *ngIf="tarea?.nombrePolitica">{{ tarea?.nombrePolitica }}</p>
     </div>
   </div>
 
   <div *ngIf="error" class="alert alert-error">
     <span>{{ error }}</span>
+    <button class="btn-close-alert" (click)="error = null">×</button>
   </div>
 
   <div *ngIf="cargando" class="loading-state">
@@ -17,70 +19,179 @@
     <p>Cargando tarea...</p>
   </div>
 
-  <div class="form-container">
-    <h3>Rellenar Formulario</h3>
-    <p *ngIf="formulario">{{ formulario.nombre }}</p>
-    <p *ngIf="!formulario">Este nodo no tiene formulario. Selecciona/escribe la decisión manual.</p>
+  <div class="form-container" *ngIf="!cargando">
+    <div class="form-meta" *ngIf="formulario">
+      <span class="form-name">{{ formulario.nombre }}</span>
+    </div>
+    <p class="text-muted" *ngIf="!formulario && !cargandoFormulario">
+      Este nodo no tiene formulario. Indica la decisión manualmente.
+    </p>
 
     <div *ngIf="cargandoFormulario" class="loading-inline">Cargando formulario...</div>
 
-    <ng-container *ngIf="formulario">
+    <ng-container *ngIf="formulario && !cargandoFormulario">
       <div class="form-group" *ngFor="let campo of formulario.campos">
-        <label class="form-label">{{ campo.etiqueta }}</label>
 
-        <input
-          *ngIf="campo.tipo === 'TEXTO'"
-          type="text"
-          class="form-input"
-          [(ngModel)]="respuesta[campo.nombre]"
-          [required]="campo.requerido"
-        />
-
-        <input
-          *ngIf="campo.tipo === 'NUMERO'"
-          type="number"
-          class="form-input"
-          [(ngModel)]="respuesta[campo.nombre]"
-          [required]="campo.requerido"
-        />
-
-        <input
-          *ngIf="campo.tipo === 'FECHA'"
-          type="date"
-          class="form-input"
-          [(ngModel)]="respuesta[campo.nombre]"
-          [required]="campo.requerido"
-        />
-
-        <select
-          *ngIf="campo.tipo === 'SELECCION'"
-          class="form-input"
-          [(ngModel)]="respuesta[campo.nombre]"
-        >
-          <option value="">Selecciona una opción</option>
-          <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
-        </select>
-
-        <div *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'" class="upload-area" (click)="fileInput.click()">
-          <ng-container *ngIf="!previewMap[campo.nombre] && !isUploadingMap[campo.nombre]">
-            <span class="upload-icon">Seleccionar archivo</span>
-            <small>{{ campo.tipo === 'IMAGEN' ? 'Imagenes (max. 10MB)' : 'Cualquier archivo (max. 10MB)' }}</small>
-          </ng-container>
-          <img *ngIf="previewMap[campo.nombre] && campo.tipo === 'IMAGEN'"
-               [src]="previewMap[campo.nombre]"
-               style="max-height: 150px; border-radius: 4px;" />
-          <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
-            Archivo listo: {{ previewMap[campo.nombre] }}
-          </span>
-          <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
-          <input #fileInput type="file"
-                 [accept]="campo.tipo === 'IMAGEN' ? 'image/*' : '*/*'"
-                 style="display: none"
-                 (change)="subirArchivo($event, campo.nombre)" />
+        <!-- ── ETIQUETA: solo texto descriptivo ─────────────────────── -->
+        <div *ngIf="campo.tipo === 'ETIQUETA'" class="campo-etiqueta">
+          <p>{{ campo.etiqueta }}</p>
         </div>
+
+        <!-- ── Resto de tipos: mostrar label ─────────────────────────── -->
+        <ng-container *ngIf="campo.tipo !== 'ETIQUETA'">
+          <div class="campo-label-row">
+            <label class="form-label">
+              {{ campo.etiqueta }}
+              <span *ngIf="campo.requerido" class="required-mark">*</span>
+            </label>
+            <!-- Botón Sugerir IA — solo en TEXTO y TEXTAREA -->
+            <button
+              *ngIf="campo.tipo === 'TEXTO' || campo.tipo === 'TEXTAREA'"
+              class="btn-sugerir"
+              type="button"
+              [disabled]="sugeriendo[campo.nombre]"
+              (click)="sugerirCampo(campo)"
+              title="Sugerir con IA">
+              {{ sugeriendo[campo.nombre] ? '...' : '✦ Sugerir' }}
+            </button>
+          </div>
+
+          <!-- TEXTO ─────────────────────────────────────────────────── -->
+          <input
+            *ngIf="campo.tipo === 'TEXTO'"
+            type="text"
+            class="form-input"
+            [(ngModel)]="respuesta[campo.nombre]"
+            [required]="campo.requerido"
+          />
+
+          <!-- TEXTAREA ─────────────────────────────────────────────── -->
+          <textarea
+            *ngIf="campo.tipo === 'TEXTAREA'"
+            class="form-input"
+            [(ngModel)]="respuesta[campo.nombre]"
+            [rows]="campo.filas || 3"
+            [required]="campo.requerido"
+          ></textarea>
+
+          <!-- NUMERO ──────────────────────────────────────────────── -->
+          <input
+            *ngIf="campo.tipo === 'NUMERO'"
+            type="number"
+            class="form-input"
+            [(ngModel)]="respuesta[campo.nombre]"
+            [required]="campo.requerido"
+          />
+
+          <!-- FECHA ─────────────────────────────────────────────────── -->
+          <input
+            *ngIf="campo.tipo === 'FECHA'"
+            type="date"
+            class="form-input"
+            [(ngModel)]="respuesta[campo.nombre]"
+            [required]="campo.requerido"
+          />
+
+          <!-- SELECCION ─────────────────────────────────────────────── -->
+          <select
+            *ngIf="campo.tipo === 'SELECCION'"
+            class="form-input"
+            [(ngModel)]="respuesta[campo.nombre]"
+          >
+            <option value="">Selecciona una opción</option>
+            <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
+          </select>
+
+          <!-- RADIO ─────────────────────────────────────────────────── -->
+          <div *ngIf="campo.tipo === 'RADIO'" class="radio-group">
+            <label
+              *ngFor="let opcion of campo.opciones"
+              class="radio-label"
+              [class.radio-selected]="respuesta[campo.nombre] === opcion"
+            >
+              <input
+                type="radio"
+                [name]="campo.nombre"
+                [value]="opcion"
+                [(ngModel)]="respuesta[campo.nombre]"
+              />
+              {{ opcion }}
+            </label>
+          </div>
+
+          <!-- CHECKBOX ──────────────────────────────────────────────── -->
+          <div *ngIf="campo.tipo === 'CHECKBOX'" class="checkbox-group">
+            <label
+              *ngFor="let opcion of campo.opciones"
+              class="checkbox-label"
+              [class.checkbox-selected]="isChecked(campo.nombre, opcion)"
+            >
+              <input
+                type="checkbox"
+                [checked]="isChecked(campo.nombre, opcion)"
+                (change)="toggleCheckbox(campo.nombre, opcion)"
+              />
+              {{ opcion }}
+            </label>
+          </div>
+
+          <!-- ARCHIVO / IMAGEN ─────────────────────────────────────── -->
+          <div *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'" class="upload-area" (click)="fileInput.click()">
+            <ng-container *ngIf="!previewMap[campo.nombre] && !isUploadingMap[campo.nombre]">
+              <span class="upload-icon">Seleccionar {{ campo.tipo === 'IMAGEN' ? 'imagen' : 'archivo' }}</span>
+              <small>{{ campo.tipo === 'IMAGEN' ? 'Imágenes (max. 10MB)' : 'Cualquier archivo (max. 10MB)' }}</small>
+            </ng-container>
+            <img *ngIf="previewMap[campo.nombre] && campo.tipo === 'IMAGEN'"
+                 [src]="previewMap[campo.nombre]"
+                 style="max-height: 150px; border-radius: 4px;" />
+            <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
+              Archivo listo: {{ previewMap[campo.nombre] }}
+            </span>
+            <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
+            <input #fileInput type="file"
+                   [accept]="campo.tipo === 'IMAGEN' ? 'image/*' : '*/*'"
+                   style="display: none"
+                   (change)="subirArchivo($event, campo.nombre)" />
+          </div>
+
+          <!-- GRID / TABLA ─────────────────────────────────────────── -->
+          <div *ngIf="campo.tipo === 'GRID'" class="grid-container">
+            <table class="grid-table">
+              <thead>
+                <tr>
+                  <th *ngFor="let col of (campo.columnas || [])">{{ col }}</th>
+                  <th class="col-acciones"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let fila of gridRows[campo.nombre]; let ri = index">
+                  <td *ngFor="let col of (campo.columnas || [])">
+                    <input
+                      class="grid-input"
+                      type="text"
+                      [(ngModel)]="fila[col]"
+                      (ngModelChange)="sincronizarGrid(campo.nombre)"
+                    />
+                  </td>
+                  <td class="col-acciones">
+                    <button type="button" class="btn-grid-remove"
+                            (click)="quitarFilaGrid(campo.nombre, ri)"
+                            [disabled]="(gridRows[campo.nombre]?.length || 0) <= 1">×</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-secondary mini"
+                    (click)="agregarFilaGrid(campo.nombre, campo.columnas || [])">
+              + Agregar fila
+            </button>
+          </div>
+
+        </ng-container>
       </div>
     </ng-container>
 
+    <!-- Decisión manual (sin formulario) -->
     <div class="form-group" *ngIf="!formulario && !cargandoFormulario">
       <label class="form-label">Decisión</label>
       <input
@@ -91,14 +202,19 @@
       />
     </div>
 
+    <!-- Observaciones -->
     <div class="form-group">
-      <label class="form-label">Observaciones (Requerido solo para rechazar tarea firmemente)</label>
+      <label class="form-label">Observaciones <small class="text-muted">(requerido solo para rechazar)</small></label>
       <textarea class="form-input" [(ngModel)]="observaciones" rows="3"></textarea>
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" (click)="completar()" [disabled]="guardando">Completar tarea</button>
-      <button class="btn btn-danger" (click)="rechazar()" [disabled]="guardando">Rechazar tarea</button>
+      <button class="btn btn-primary" (click)="completar()" [disabled]="guardando">
+        {{ guardando ? 'Guardando...' : 'Completar tarea' }}
+      </button>
+      <button class="btn btn-danger" (click)="rechazar()" [disabled]="guardando">
+        Rechazar tarea
+      </button>
     </div>
   </div>
 </div>

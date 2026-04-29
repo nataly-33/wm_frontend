@@ -4,7 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 
-export type CampoTipo = 'TEXTO' | 'NUMERO' | 'FECHA' | 'SELECCION' | 'ARCHIVO' | 'IMAGEN';
+export type CampoTipo =
+  'TEXTO' | 'TEXTAREA' | 'NUMERO' | 'FECHA' |
+  'SELECCION' | 'RADIO' | 'CHECKBOX' |
+  'ARCHIVO' | 'IMAGEN' | 'ETIQUETA' | 'GRID';
 
 export interface FormularioCampo {
   nombre: string;
@@ -13,6 +16,8 @@ export interface FormularioCampo {
   requerido: boolean;
   esCampoPrioridad: boolean;
   opciones: string[];
+  filas?: number;
+  columnas?: string[];
 }
 
 export interface Formulario {

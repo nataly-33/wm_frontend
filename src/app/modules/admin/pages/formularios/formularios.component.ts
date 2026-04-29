@@ -11,6 +11,7 @@ import {
   FormularioService,
   FormulariosAgrupadosPorPolitica
 } from '../../../../core/services/formulario.service';
+import { IaService } from '../../../../core/services/ia.service';
 import { Nodo, NodoService } from '../../../../core/services/nodo.service';
 import { Politica, PoliticaService } from '../../../../core/services/politica.service';
 import { SocketService } from '../../../../core/services/socket.service';
@@ -33,6 +34,14 @@ export class FormulariosComponent implements OnInit, OnDestroy {
   error: string | null = null;
   guardando = false;
   eliminando = false;
+  sugiriendoIa = false;
+  mensajeIa: string | null = null;
+
+  readonly TIPOS_CON_OPCIONES = ['SELECCION', 'RADIO', 'CHECKBOX'];
+  tieneOpciones(ctrl: any): boolean { return this.TIPOS_CON_OPCIONES.includes(ctrl.get('tipo')?.value); }
+  esTextarea(ctrl: any): boolean { return ctrl.get('tipo')?.value === 'TEXTAREA'; }
+  esGrid(ctrl: any): boolean { return ctrl.get('tipo')?.value === 'GRID'; }
+  esEtiqueta(ctrl: any): boolean { return ctrl.get('tipo')?.value === 'ETIQUETA'; }
 
   mostrarModal = false;
   modo: 'crear' | 'editar' = 'crear';
@@ -46,6 +55,7 @@ export class FormulariosComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private formularioService: FormularioService,
+    private iaService: IaService,
     private politicaService: PoliticaService,
     private nodoService: NodoService,
     private socketService: SocketService,
@@ -91,9 +101,56 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         tipo: ['TEXTO', Validators.required],
         requerido: [true],
         esCampoPrioridad: [false],
-        opcionesRaw: ['']
+        opcionesRaw: [''],
+        filas: [3],
+        columnasRaw: ['']
       })
     );
+  }
+
+  sugerirCamposConIa(): void {
+    const nodoId = this.form.value.nodoId as string;
+    const nodo = this.nodosPoliticaSeleccionada.find(n => n.id === nodoId);
+    if (!nodo) {
+      this.mensajeIa = 'Selecciona una política y un nodo primero.';
+      return;
+    }
+
+    this.sugiriendoIa = true;
+    this.mensajeIa = null;
+    this.error = null;
+
+    this.iaService.generarFormulario({ nombreNodo: nodo.nombre, descripcion: nodo.nombre })
+      .pipe(finalize(() => this.sugiriendoIa = false))
+      .subscribe({
+        next: (res: any) => {
+          const campos: any[] = res?.data?.campos ?? res?.campos ?? [];
+          if (!campos.length) {
+            this.mensajeIa = 'La IA no pudo generar campos para este nodo.';
+            return;
+          }
+          this.campos.clear();
+          campos.forEach((c: any) => {
+            this.campos.push(this.fb.group({
+              nombre: [c.nombre ?? '', Validators.required],
+              etiqueta: [c.etiqueta ?? '', Validators.required],
+              tipo: [c.tipo ?? 'TEXTO', Validators.required],
+              requerido: [c.requerido ?? true],
+              esCampoPrioridad: [c.es_campo_prioridad ?? false],
+              opcionesRaw: [(c.opciones ?? []).join(',')],
+              filas: [c.filas ?? 3],
+              columnasRaw: [(c.columnas ?? []).join(',')]
+            }));
+          });
+          if (!this.form.value.nombre) {
+            this.form.patchValue({ nombre: `Formulario - ${nodo.nombre}` });
+          }
+          this.mensajeIa = `${campos.length} campos generados con IA.`;
+        },
+        error: (err: any) => {
+          this.mensajeIa = err?.error?.message ?? 'Error al conectar con el servicio de IA.';
+        }
+      });
   }
 
   quitarCampo(index: number): void {
@@ -142,7 +199,9 @@ export class FormulariosComponent implements OnInit, OnDestroy {
           tipo: [c.tipo, Validators.required],
           requerido: [c.requerido],
           esCampoPrioridad: [c.esCampoPrioridad],
-          opcionesRaw: [(c.opciones ?? []).join(',')]
+          opcionesRaw: [(c.opciones ?? []).join(',')],
+          filas: [c.filas ?? 3],
+          columnasRaw: [(c.columnas ?? []).join(',')]
         })
       );
     });
@@ -203,9 +262,11 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         requerido: !!ctrl.value.requerido,
         esCampoPrioridad: !!ctrl.value.esCampoPrioridad,
         opciones: (ctrl.value.opcionesRaw ?? '')
-          .split(',')
-          .map((v: string) => v.trim())
-          .filter((v: string) => v.length > 0)
+          .split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0),
+        filas: ctrl.value.tipo === 'TEXTAREA' ? (ctrl.value.filas ?? 3) : null,
+        columnas: ctrl.value.tipo === 'GRID'
+          ? (ctrl.value.columnasRaw ?? '').split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0)
+          : null
       }))
     };
 
