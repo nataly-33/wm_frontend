@@ -17,6 +17,8 @@ export class SocketService {
   private formulariosEmpresaSubjects = new Map<string, Subject<any>>();
   private formulariosDeptoSubjects = new Map<string, Subject<any>>();
   private formulariosSubscriptions = new Set<string>();
+  private diagramaSubjects = new Map<string, Subject<any>>();
+  private diagramaSubscriptions = new Set<string>();
 
   constructor(private authService: AuthService) {
     this.authService.getCurrentUser$().subscribe((user) => {
@@ -92,6 +94,17 @@ export class SocketService {
           this.formulariosSubscriptions.add(topic);
         }
       }
+
+      // Resuscribir diagrama colaborativo pendientes
+      for (const [politicaId, subject] of this.diagramaSubjects.entries()) {
+        const topic = `/topic/diagrama/${politicaId}`;
+        if (!this.diagramaSubscriptions.has(topic)) {
+          this.client.subscribe(topic, (message: Message) => {
+            subject.next(JSON.parse(message.body));
+          });
+          this.diagramaSubscriptions.add(topic);
+        }
+      }
     };
 
     this.client.onDisconnect = () => {
@@ -99,6 +112,7 @@ export class SocketService {
       console.log('WebSocket desconectado');
       this.monitorSubscriptions.clear();
       this.formulariosSubscriptions.clear();
+      this.diagramaSubscriptions.clear();
     };
 
     this.client.onStompError = (frame) => {
@@ -171,6 +185,27 @@ export class SocketService {
     }
 
     return subject.asObservable();
+  }
+
+  suscribirADiagrama(politicaId: string): Observable<any> {
+    this.ensureConectado();
+    if (!this.diagramaSubjects.has(politicaId)) {
+      this.diagramaSubjects.set(politicaId, new Subject<any>());
+    }
+    const subject = this.diagramaSubjects.get(politicaId)!;
+    const topic = `/topic/diagrama/${politicaId}`;
+    if (this.client && this.client.connected && !this.diagramaSubscriptions.has(topic)) {
+      this.client.subscribe(topic, (message: Message) => {
+        subject.next(JSON.parse(message.body));
+      });
+      this.diagramaSubscriptions.add(topic);
+    }
+    return subject.asObservable();
+  }
+
+  desuscribirDiagrama(politicaId: string): void {
+    this.diagramaSubjects.delete(politicaId);
+    this.diagramaSubscriptions.delete(`/topic/diagrama/${politicaId}`);
   }
 
   suscribirAFormulariosDepartamento(departamentoId: string): Observable<any> {

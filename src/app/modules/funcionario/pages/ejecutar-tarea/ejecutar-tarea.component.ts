@@ -105,11 +105,15 @@ export class EjecutarTareaComponent implements OnInit {
           this.checkboxSets[campo.nombre] = new Set<string>();
           this.respuesta[campo.nombre] = [];
           break;
-        case 'GRID':
+        case 'GRID': {
+          const cols = campo.columnas ?? [];
           this.gridRows[campo.nombre] = [];
-          this.agregarFilaGrid(campo.nombre, campo.columnas ?? []);
+          if (cols.length > 0) {
+            this.agregarFilaGrid(campo.nombre, cols);
+          }
           this.respuesta[campo.nombre] = [];
           break;
+        }
         case 'ETIQUETA':
           // No se guarda valor
           break;

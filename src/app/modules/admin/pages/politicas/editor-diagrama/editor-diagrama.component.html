@@ -25,6 +25,13 @@
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
   <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
+  <!-- Notificación colaborativa: otro admin guardó el diagrama -->
+  <div *ngIf="notifColaborativa" class="alert alert-colaborativa">
+    <span>{{ notifColaborativa }}</span>
+    <button class="btn btn-primary btn-sm" (click)="recargarDiagrama()">Recargar ahora</button>
+    <button class="btn-close-alert" (click)="notifColaborativa = null">×</button>
+  </div>
+
   <section class="editor-layout">
     <aside class="stencil panel-light">
       <h3>Paleta UML</h3>

@@ -5,7 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as joint from '@joint/core';
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { SocketService } from '../../../../../core/services/socket.service';
 
 import {
   DiagramaNodoPayload,
@@ -101,6 +103,11 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private tempCounter = 0;
   private isApplyingAutoLayout = false;
   private puertosResaltadosPorFlecha = false;
+  private diagramaSub?: Subscription;
+
+  // Colaboración en tiempo real
+  notifColaborativa: string | null = null;
+  private miUserId = '';
 
   propiedadesTemp = {
     etiqueta: '',
@@ -139,11 +146,15 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     private route: ActivatedRoute,
     private politicaService: PoliticaService,
     private departamentoService: DepartamentoService,
-    private iaService: IaService
+    private iaService: IaService,
+    private socketService: SocketService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.politicaId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.miUserId = this.authService.getCurrentUser()?.id ?? '';
+    this.suscribirColaboracion();
   }
 
   ngAfterViewInit(): void {
@@ -155,6 +166,26 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.paper) {
       this.paper.remove();
     }
+    this.diagramaSub?.unsubscribe();
+    if (this.politicaId) {
+      this.socketService.desuscribirDiagrama(this.politicaId);
+    }
+  }
+
+  private suscribirColaboracion(): void {
+    if (!this.politicaId) return;
+    this.diagramaSub = this.socketService.suscribirADiagrama(this.politicaId)
+      .subscribe((evento: any) => {
+        if (evento?.tipo === 'DIAGRAMA_GUARDADO' && evento.guardadoPor !== this.miUserId) {
+          this.notifColaborativa =
+            `${evento.nombreEditor} guardó el diagrama (v${evento.version}). Recarga para ver los cambios.`;
+        }
+      });
+  }
+
+  recargarDiagrama(): void {
+    this.notifColaborativa = null;
+    this.cargarDatos();
   }
 
   get departamentosDisponiblesParaCarril(): Departamento[] {
