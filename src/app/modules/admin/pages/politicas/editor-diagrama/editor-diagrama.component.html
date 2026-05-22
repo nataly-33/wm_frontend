@@ -25,11 +25,10 @@
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
   <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
-  <!-- Notificación colaborativa: otro admin guardó el diagrama -->
+  <!-- Notificación colaborativa: otro admin se unió -->
   <div *ngIf="notifColaborativa" class="alert alert-colaborativa">
     <span>{{ notifColaborativa }}</span>
-    <button class="btn btn-primary btn-sm" (click)="recargarDiagrama()">Recargar ahora</button>
-    <button class="btn-close-alert" (click)="notifColaborativa = null">×</button>
+    <button class="btn-close-alert" (click)="notifColaborativa = null">x</button>
   </div>
 
   <section class="editor-layout">
@@ -92,6 +91,7 @@
       <div
         class="canvas-container"
         id="diagram-canvas-container"
+        #canvasContainer
         (dragover)="onCanvasDragOver($event)"
         (drop)="onCanvasDrop($event)"
       >
@@ -101,15 +101,20 @@
       <div class="bottom-properties" *ngIf="esTransicionSeleccionada() || esNodoSeleccionado()">
         <div class="bottom-block" *ngIf="esNodoSeleccionado()">
           <h3>Nodo</h3>
-          <div class="form-group">
-            <label>Nombre</label>
-            <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.nombre" (input)="actualizarNodoSeleccionado()" />
+          <div class="node-fields-row">
+            <div class="form-group-mini">
+              <label>Nombre</label>
+              <input type="text" class="input-mini" [(ngModel)]="propiedadesNodoTemp.nombre" (input)="actualizarNodoSeleccionado()" />
+            </div>
+            <div class="form-group-mini">
+              <label>Formulario</label>
+              <select class="input-mini" [(ngModel)]="propiedadesNodoTemp.formularioId" (change)="actualizarNodoSeleccionado()">
+                <option value="">Sin formulario</option>
+                <option *ngFor="let f of formulariosList" [value]="f.id">{{ f.nombre }}</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Formulario asignado</label>
-            <input type="text" class="input-base" [(ngModel)]="propiedadesNodoTemp.formularioId" (input)="actualizarNodoSeleccionado()" />
-          </div>
-          <p class="properties-help">Doble click para abrir edicion detallada en modal.</p>
+          <p class="properties-help">Doble click para editar en modal.</p>
         </div>
 
         <div class="bottom-block" *ngIf="esTransicionSeleccionada()">
@@ -144,7 +149,10 @@
       </div>
       <div class="form-group">
         <label>Formulario asignado</label>
-        <input type="text" class="input-base" [(ngModel)]="nodoModal.formularioId" />
+        <select class="input-base" [(ngModel)]="nodoModal.formularioId">
+          <option value="">Sin formulario</option>
+          <option *ngFor="let f of formulariosList" [value]="f.id">{{ f.nombre }}</option>
+        </select>
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" (click)="cancelarModalNodo()">Cancelar</button>

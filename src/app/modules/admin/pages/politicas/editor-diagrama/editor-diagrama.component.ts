@@ -5,9 +5,11 @@ import { ActivatedRoute } from '@angular/router';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as joint from '@joint/core';
-import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
+import { firstValueFrom, forkJoin, of, Subscription } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { SocketService } from '../../../../../core/services/socket.service';
+import { FormularioDepartamentoItem, FormularioService } from '../../../../../core/services/formulario.service';
 
 import {
   DiagramaNodoPayload,
@@ -81,6 +83,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly portIdleOpacity = 0.04;
 
   @ViewChild('diagramCanvas', { static: true }) diagramCanvasRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('canvasContainer', { static: true }) canvasContainerRef!: ElementRef<HTMLDivElement>;
 
   politicaId = '';
   politica: Politica | null = null;
@@ -104,6 +107,8 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private isApplyingAutoLayout = false;
   private puertosResaltadosPorFlecha = false;
   private diagramaSub?: Subscription;
+  private aplicandoRemoto = false;
+  private scrollRafId?: number;
 
   // Colaboración en tiempo real
   notifColaborativa: string | null = null;
@@ -127,6 +132,8 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     formularioId: ''
   };
 
+  formulariosList: { id: string; nombre: string }[] = [];
+
   // IA — Generación de diagrama
   mostrarModalIa = false;
   promptIa = '';
@@ -146,6 +153,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     private route: ActivatedRoute,
     private politicaService: PoliticaService,
     private departamentoService: DepartamentoService,
+    private formularioService: FormularioService,
     private iaService: IaService,
     private socketService: SocketService,
     private authService: AuthService
@@ -160,6 +168,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   ngAfterViewInit(): void {
     this.initJointEditor();
     this.cargarDatos();
+    this.canvasContainerRef.nativeElement.addEventListener('scroll', () => this.actualizarLabelsStickyLanes());
   }
 
   ngOnDestroy(): void {
@@ -176,11 +185,93 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     if (!this.politicaId) return;
     this.diagramaSub = this.socketService.suscribirADiagrama(this.politicaId)
       .subscribe((evento: any) => {
-        if (evento?.tipo === 'DIAGRAMA_GUARDADO' && evento.guardadoPor !== this.miUserId) {
-          this.notifColaborativa =
-            `${evento.nombreEditor} guardó el diagrama (v${evento.version}). Recarga para ver los cambios.`;
+        if (!evento || evento.usuarioId === this.miUserId) return;
+        switch (evento.tipo) {
+          case 'DIAGRAMA_GUARDADO':
+            this.info = `${evento.nombreEditor || 'Otro usuario'} guardo el diagrama (v${evento.version}).`;
+            break;
+          case 'MOVER_NODO': {
+            const cellM = this.graph.getCell(evento.elementoId);
+            if (cellM && cellM.isElement()) {
+              this.aplicandoRemoto = true;
+              try {
+                (cellM as joint.dia.Element).position(evento.datos['x'], evento.datos['y']);
+                if (evento.datos['departamentoId']) {
+                  cellM.set('departamentoId', evento.datos['departamentoId']);
+                }
+              } finally {
+                this.aplicandoRemoto = false;
+              }
+            }
+            break;
+          }
+          case 'ELIMINAR_NODO':
+          case 'ELIMINAR_TRANSICION': {
+            const cellD = this.graph.getCell(evento.elementoId);
+            if (cellD) cellD.remove();
+            break;
+          }
+          case 'AGREGAR_NODO': {
+            const datos = evento.datos as { tipo?: string; nombre?: string; x?: number; y?: number; departamentoId?: string } || {};
+            const tipo = this.normalizeNodoTipo(datos['tipo']);
+            if (!this.graph.getCell(evento.elementoId)) {
+              const lane = this.lanes[0];
+              const deptoId = (datos['departamentoId'] as string) || (lane ? lane.departamentoId : '');
+              this.aplicandoRemoto = true;
+              try {
+                this.createNode({
+                  tempId: evento.elementoId,
+                  tipo,
+                  nombre: datos['nombre'] || this.defaultLabelForTipo(tipo),
+                  departamentoId: deptoId,
+                  posicionX: datos['x'] ?? 40,
+                  posicionY: datos['y'] ?? 90
+                });
+              } finally {
+                this.aplicandoRemoto = false;
+              }
+            }
+            break;
+          }
+          case 'AGREGAR_TRANSICION': {
+            const datos = evento.datos as { sourceId?: string; sourcePort?: string; targetId?: string; targetPort?: string } || {};
+            if (!datos['sourceId'] || !datos['targetId']) break;
+            const source = this.graph.getCell(datos['sourceId'] as string) as joint.dia.Element | null;
+            const target = this.graph.getCell(datos['targetId'] as string) as joint.dia.Element | null;
+            if (!source || !target) break;
+            this.aplicandoRemoto = true;
+            try {
+              const existing = this.graph.getCell(evento.elementoId);
+              if (existing && existing.isLink()) {
+                (existing as joint.shapes.standard.Link).source({ id: source.id, port: datos['sourcePort'] || 'bottom' });
+                (existing as joint.shapes.standard.Link).target({ id: target.id, port: datos['targetPort'] || 'top' });
+              } else {
+                const link = this.createLink(evento.elementoId);
+                link.source({ id: source.id, port: datos['sourcePort'] || 'bottom' });
+                link.target({ id: target.id, port: datos['targetPort'] || 'top' });
+                this.graph.addCell(link);
+              }
+            } finally {
+              this.aplicandoRemoto = false;
+            }
+            break;
+          }
+          case 'USUARIO_CONECTADO':
+            this.notifColaborativa = `${evento.datos?.['nombre'] || 'Otro usuario'} se unio al editor.`;
+            break;
         }
       });
+
+    // Anunciar presencia
+    setTimeout(() => {
+      const usuario = this.authService.getCurrentUser();
+      this.socketService.publicarEventoDiagrama(this.politicaId, {
+        tipo: 'USUARIO_CONECTADO',
+        elementoId: '',
+        usuarioId: this.miUserId,
+        datos: { nombre: (usuario as any)?.nombre || 'Usuario' }
+      });
+    }, 1500);
   }
 
   recargarDiagrama(): void {
@@ -295,8 +386,15 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
   eliminarSeleccion(): void {
     if (this.selectedLink) {
+      const linkId = this.selectedLink.id.toString();
       this.selectedLink.remove();
       this.clearSelection();
+      this.socketService.publicarEventoDiagrama(this.politicaId, {
+        tipo: 'ELIMINAR_TRANSICION',
+        elementoId: linkId,
+        usuarioId: this.miUserId,
+        datos: {}
+      });
       return;
     }
 
@@ -308,8 +406,15 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
         return;
       }
 
+      const nodoId = this.selectedElement.id.toString();
       this.selectedElement.remove();
       this.clearSelection();
+      this.socketService.publicarEventoDiagrama(this.politicaId, {
+        tipo: 'ELIMINAR_NODO',
+        elementoId: nodoId,
+        usuarioId: this.miUserId,
+        datos: {}
+      });
     }
   }
 
@@ -580,6 +685,55 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     this.info = 'Diagrama organizado automaticamente.';
   }
 
+  private async cargarFormularios(): Promise<void> {
+    const deptIds = this.lanes.length > 0
+      ? this.lanes.map(l => l.departamentoId)
+      : this.departamentosCompletos.slice(0, 8).map(d => d.id);
+
+    if (deptIds.length === 0) return;
+
+    const calls = deptIds.map(id =>
+      firstValueFrom(
+        this.formularioService.listarPorDepartamento(id).pipe(
+          catchError(() => of({ data: [] as FormularioDepartamentoItem[] }))
+        )
+      )
+    );
+
+    const results = await Promise.all(calls);
+    const seen = new Set<string>();
+    const list: { id: string; nombre: string }[] = [];
+
+    for (const r of results) {
+      for (const item of (r.data ?? [])) {
+        if (item.politicaId === this.politicaId && item.formulario) {
+          const f = item.formulario;
+          if (!seen.has(f.id)) {
+            seen.add(f.id);
+            list.push({ id: f.id, nombre: f.nombre });
+          }
+        }
+      }
+    }
+
+    this.formulariosList = list;
+  }
+
+  private actualizarLabelsStickyLanes(): void {
+    if (this.scrollRafId) cancelAnimationFrame(this.scrollRafId);
+    this.scrollRafId = requestAnimationFrame(() => {
+      this.scrollRafId = undefined;
+      if (!this.graph || !this.canvasContainerRef) return;
+      const scrollTop = this.canvasContainerRef.nativeElement.scrollTop;
+      this.graph.getElements().forEach((el) => {
+        if (el.get('kind') !== 'LANE') return;
+        el.attr('label/y', scrollTop + 10, { silent: true });
+        const view = this.paper.findViewByModel(el);
+        if (view) (view as any).update();
+      });
+    });
+  }
+
   private initJointEditor(): void {
     this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
 
@@ -676,27 +830,55 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     this.graph.on('change:position', (cell: joint.dia.Cell) => {
-      if (this.isApplyingAutoLayout) {
+      if (this.isApplyingAutoLayout || this.aplicandoRemoto) {
         return;
       }
       if (!cell.isElement() || cell.get('kind') !== 'NODE') {
         return;
       }
       this.snapNodeIntoLane(cell as joint.dia.Element);
+      const pos = (cell as joint.dia.Element).position();
+      this.socketService.publicarEventoDiagrama(this.politicaId, {
+        tipo: 'MOVER_NODO',
+        elementoId: cell.id.toString(),
+        usuarioId: this.miUserId,
+        datos: {
+          x: pos.x,
+          y: pos.y,
+          departamentoId: (cell as joint.dia.Element).get('departamentoId') || ''
+        }
+      });
     });
 
     this.graph.on('add', (cell: joint.dia.Cell) => {
-      if (!cell.isLink()) {
-        return;
+      if (cell.isLink()) {
+        const link = cell as joint.dia.Link;
+        if (!link.get('tempId')) {
+          link.set('tempId', `tmp_tr_${Date.now()}_${++this.tempCounter}`);
+        }
+        if (!link.get('transicionTipo')) {
+          link.set('transicionTipo', 'LINEAL');
+        }
+        this.aplicarReglasDeTransicion(link);
+        // La publicación WebSocket de AGREGAR_TRANSICION se hace en paper.on('link:connect')
+      } else if (cell.isElement() && cell.get('kind') === 'NODE') {
+        if (!this.aplicandoRemoto) {
+          const el = cell as joint.dia.Element;
+          const pos = el.position();
+          this.socketService.publicarEventoDiagrama(this.politicaId, {
+            tipo: 'AGREGAR_NODO',
+            elementoId: cell.id.toString(),
+            usuarioId: this.miUserId,
+            datos: {
+              tipo: cell.get('nodeTipo'),
+              nombre: (el.get('nodeNombre') as string) || el.attr('label/text') || '',
+              x: pos.x,
+              y: pos.y,
+              departamentoId: cell.get('departamentoId') || ''
+            }
+          });
+        }
       }
-      const link = cell as joint.dia.Link;
-      if (!link.get('tempId')) {
-        link.set('tempId', `tmp_tr_${Date.now()}_${++this.tempCounter}`);
-      }
-      if (!link.get('transicionTipo')) {
-        link.set('transicionTipo', 'LINEAL');
-      }
-      this.aplicarReglasDeTransicion(link);
     });
 
     this.graph.on('change:source', (cell: joint.dia.Cell) => {
@@ -706,16 +888,37 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     this.graph.on('change:target', (cell: joint.dia.Cell) => {
-      if (cell.isLink()) {
-        this.aplicarReglasDeTransicion(cell as joint.dia.Link);
+      if (!cell.isLink()) return;
+      this.aplicarReglasDeTransicion(cell as joint.dia.Link);
+    });
+
+    this.paper.on('link:connect', (linkView: joint.dia.LinkView) => {
+      if (this.aplicandoRemoto) return;
+      const link = linkView.model as joint.shapes.standard.Link;
+      const src = link.source();
+      const tgt = link.target();
+      if (src.id && tgt.id) {
+        this.aplicarReglasDeTransicion(link);
+        this.socketService.publicarEventoDiagrama(this.politicaId, {
+          tipo: 'AGREGAR_TRANSICION',
+          elementoId: link.id.toString(),
+          usuarioId: this.miUserId,
+          datos: {
+            sourceId: src.id.toString(),
+            sourcePort: (src as any).port || '',
+            targetId: tgt.id.toString(),
+            targetPort: (tgt as any).port || ''
+          }
+        });
       }
     });
 
     this.ensurePaperDimensions();
   }
 
-  private createLink(): joint.shapes.standard.Link {
+  private createLink(fixedId?: string): joint.shapes.standard.Link {
     const link = new joint.shapes.standard.Link({
+      ...(fixedId ? { id: fixedId } : {}),
       attrs: {
         line: {
           stroke: '#7A7A40',
@@ -749,10 +952,17 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       y: payload.posicionY ?? 90
     };
 
+    // When a tempId is provided (local creation or remote application), use it as the
+    // JointJS cell id so that all peers reference the same cell by the same id.
+    // This is the same pattern used by createLink() with its fixedId parameter.
+    const cellId = payload.tempId || payload.id || undefined;
+    const idProp = cellId ? { id: cellId } : {};
+
     let element: joint.dia.Element;
 
     if (payload.tipo === 'INICIO') {
       element = new joint.shapes.standard.Circle({
+        ...idProp,
         position,
         size: { width: size.w, height: size.h },
         attrs: {
@@ -762,6 +972,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       });
     } else if (payload.tipo === 'FIN') {
       element = new joint.shapes.standard.Circle({
+        ...idProp,
         position,
         size: { width: size.w, height: size.h },
         attrs: {
@@ -771,6 +982,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       });
     } else if (payload.tipo === 'DECISION') {
       element = new joint.shapes.standard.Polygon({
+        ...idProp,
         position,
         size: { width: size.w, height: size.h },
         attrs: {
@@ -795,6 +1007,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       });
     } else if (payload.tipo === 'PARALELO') {
       element = new joint.shapes.standard.Rectangle({
+        ...idProp,
         position,
         size: { width: size.w, height: size.h },
         attrs: {
@@ -804,6 +1017,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       });
     } else {
       element = new joint.shapes.standard.Rectangle({
+        ...idProp,
         position,
         size: { width: size.w, height: size.h },
         attrs: {
@@ -831,7 +1045,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
 
     element.set('kind', 'NODE');
     element.set('nodoDbId', payload.id || undefined);
-    element.set('tempId', payload.tempId || payload.id || `tmp_node_${Date.now()}_${++this.tempCounter}`);
+    element.set('tempId', cellId || `tmp_node_${Date.now()}_${++this.tempCounter}`);
     element.set('nodeTipo', payload.tipo);
     element.set('nodeNombre', payload.nombre || this.defaultLabelForTipo(payload.tipo));
     element.set('departamentoId', payload.departamentoId || '');
@@ -964,6 +1178,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       this.politica = politica.data;
       this.departamentosCompletos = deptos.data ?? diagrama.data?.departamentos ?? [];
       this.hidratarDesdeDiagrama(diagrama.data ?? undefined);
+      await this.cargarFormularios();
 
       if (this.graph.getCells().length === 0) {
         this.info = 'Sin diagrama guardado aun. Agrega carriles y arrastra figuras desde la paleta.';
@@ -1023,6 +1238,13 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     const laneByDept = new Map(this.lanes.map((l) => [l.departamentoId, l] as const));
 
     this.graph.getElements().forEach((el) => {
+      if (el.get('kind') === 'LANE') {
+        el.attr('label/stroke', '#F9F9F9');
+        el.attr('label/strokeWidth', 7);
+        el.attr('label/paintOrder', 'stroke');
+        el.attr('label/fontWeight', 700);
+        return;
+      }
       if (el.get('kind') !== 'NODE') {
         return;
       }
@@ -1265,13 +1487,16 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
         },
         label: {
           text: nombre,
-          fill: '#4B5563',
+          fill: '#374151',
           fontSize: 11,
-          fontWeight: 600,
+          fontWeight: 700,
           textAnchor: 'middle',
           textVerticalAnchor: 'top',
           x: this.laneWidth / 2,
-          y: 10
+          y: 10,
+          stroke: '#F9F9F9',
+          strokeWidth: 7,
+          paintOrder: 'stroke'
         }
       }
     });
