@@ -1,0 +1,101 @@
+<div class="historial-page">
+
+  <!-- Encabezado -->
+  <div class="page-header">
+    <a [routerLink]="['/admin/tramites', tramiteId]" class="btn-back">
+      &larr; Volver al tramite
+    </a>
+    <h2 class="page-titulo">Historial de Formularios Rellenados</h2>
+    <p class="page-subtitulo">Tramite ID: {{ tramiteId }}</p>
+  </div>
+
+  <!-- Cargando -->
+  <div *ngIf="cargando" class="estado-info">
+    <span>Cargando historial...</span>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="estado-error">
+    {{ error }}
+    <button (click)="cargar()" class="btn-reintentar">Reintentar</button>
+  </div>
+
+  <!-- Sin datos -->
+  <div *ngIf="!cargando && !error && historial.length === 0" class="estado-info">
+    No hay formularios completados en este tramite aun.
+  </div>
+
+  <!-- Timeline -->
+  <div *ngIf="!cargando && historial.length > 0" class="timeline">
+
+    <div *ngFor="let item of historial; let i = index" class="timeline-item">
+
+      <!-- Linea y punto -->
+      <div class="timeline-marker">
+        <div class="timeline-punto"></div>
+        <div *ngIf="i < historial.length - 1" class="timeline-linea"></div>
+      </div>
+
+      <!-- Tarjeta del nodo -->
+      <div class="timeline-card">
+
+        <!-- Cabecera del nodo -->
+        <div class="card-header">
+          <div class="card-header-info">
+            <h3 class="nodo-nombre">{{ item.nombreNodo }}</h3>
+            <div class="nodo-meta">
+              <span *ngIf="item.departamentoNombre" class="meta-item">
+                Depto: {{ item.departamentoNombre }}
+              </span>
+              <span *ngIf="item.funcionarioNombre" class="meta-item">
+                Funcionario: {{ item.funcionarioNombre }}
+              </span>
+              <span *ngIf="item.completadoEn" class="meta-item">
+                Completado: {{ formatFecha(item.completadoEn) }}
+              </span>
+            </div>
+          </div>
+          <span [class]="getEstadoClass(item.estado)">{{ item.estado }}</span>
+        </div>
+
+        <!-- Observaciones si las hay -->
+        <div *ngIf="item.observaciones" class="observaciones">
+          <strong>Observaciones:</strong> {{ item.observaciones }}
+        </div>
+
+        <!-- Tabla de campos -->
+        <div *ngIf="item.campos && item.campos.length > 0" class="campos-tabla-wrapper">
+          <table class="campos-tabla">
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let campo of item.campos">
+                <td class="campo-etiqueta">{{ campo.etiqueta }}</td>
+                <td class="campo-valor">
+                  <ng-container *ngIf="campo.esArchivo && esUrl(campo.valor); else textoValor">
+                    <a [href]="campo.valor" target="_blank" class="link-archivo">
+                      Ver archivo
+                    </a>
+                  </ng-container>
+                  <ng-template #textoValor>
+                    {{ formatValor(campo) }}
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!item.campos || item.campos.length === 0" class="sin-campos">
+          Sin campos registrados para este nodo.
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

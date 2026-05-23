@@ -3,6 +3,9 @@
   <div class="page-header">
     <a class="btn btn-secondary" routerLink="/admin/tramites">Volver</a>
     <h1 class="page-title">Detalle del Tramite</h1>
+    <a *ngIf="tramite" class="btn btn-outline" [routerLink]="['/admin/tramites', tramite.id, 'historial-formularios']">
+      Ver formularios rellenados
+    </a>
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
