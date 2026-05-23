@@ -5,8 +5,8 @@ import { ActivatedRoute } from '@angular/router';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as joint from '@joint/core';
-import { firstValueFrom, forkJoin, of, Subscription } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { firstValueFrom, forkJoin, fromEvent, of, Subscription } from 'rxjs';
+import { catchError, throttleTime } from 'rxjs/operators';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { SocketService } from '../../../../../core/services/socket.service';
 import { FormularioDepartamentoItem, FormularioService } from '../../../../../core/services/formulario.service';
@@ -111,8 +111,16 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
   private scrollRafId?: number;
 
   // Colaboración en tiempo real
-  notifColaborativa: string | null = null;
   private miUserId = '';
+
+  // Cursores remotos: Map<usuarioId, { elemento: HTMLDivElement, timeoutId: any }>
+  private cursoresRemotos = new Map<string, { elemento: HTMLDivElement; timeoutId: any }>();
+  private mouseMoveSubscription?: Subscription;
+
+  private static readonly CURSOR_COLORS = [
+    '#E53935', '#8E24AA', '#1E88E5', '#00ACC1',
+    '#43A047', '#FB8C00', '#6D4C41', '#546E7A'
+  ];
 
   propiedadesTemp = {
     etiqueta: '',
@@ -169,6 +177,7 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
     this.initJointEditor();
     this.cargarDatos();
     this.canvasContainerRef.nativeElement.addEventListener('scroll', () => this.actualizarLabelsStickyLanes());
+    this.iniciarTrackingCursor();
   }
 
   ngOnDestroy(): void {
@@ -176,9 +185,121 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
       this.paper.remove();
     }
     this.diagramaSub?.unsubscribe();
+    this.mouseMoveSubscription?.unsubscribe();
+    this.limpiarTodosCursores();
     if (this.politicaId) {
       this.socketService.desuscribirDiagrama(this.politicaId);
     }
+  }
+
+  private colorParaUsuario(usuarioId: string): string {
+    let hash = 0;
+    for (let i = 0; i < usuarioId.length; i++) {
+      hash = (hash * 31 + usuarioId.charCodeAt(i)) >>> 0;
+    }
+    return EditorDiagramaComponent.CURSOR_COLORS[hash % EditorDiagramaComponent.CURSOR_COLORS.length];
+  }
+
+  private iniciarTrackingCursor(): void {
+    if (!this.politicaId) return;
+    const usuario = this.authService.getCurrentUser();
+    const nombreUsuario = (usuario as any)?.nombre || 'Usuario';
+
+    const canvasEl = this.diagramCanvasRef.nativeElement;
+
+    this.mouseMoveSubscription = fromEvent<MouseEvent>(canvasEl, 'mousemove')
+      .pipe(throttleTime(50))
+      .subscribe((event: MouseEvent) => {
+        if (!this.paper) return;
+        const localPoint = this.paper.clientToLocalPoint({ x: event.clientX, y: event.clientY });
+        this.socketService.publicarEventoDiagrama(this.politicaId, {
+          tipo: 'CURSOR_MOVE',
+          elementoId: '',
+          usuarioId: this.miUserId,
+          datos: {
+            x: localPoint.x,
+            y: localPoint.y,
+            nombre: nombreUsuario
+          }
+        });
+      });
+  }
+
+  private actualizarCursorRemoto(usuarioId: string, x: number, y: number, nombre: string): void {
+    if (!this.paper) return;
+
+    const containerEl = this.canvasContainerRef.nativeElement as HTMLElement;
+    const color = this.colorParaUsuario(usuarioId);
+
+    let entrada = this.cursoresRemotos.get(usuarioId);
+
+    if (!entrada) {
+      // Crear elemento del cursor
+      const div = document.createElement('div');
+      div.className = 'remote-cursor';
+      div.setAttribute('data-userid', usuarioId);
+      div.style.cssText = 'position:absolute; pointer-events:none; z-index:9999; top:0; left:0;';
+
+      div.innerHTML =
+        `<svg width="16" height="20" viewBox="0 0 16 20" style="display:block;">` +
+        `<path d="M0 0 L0 16 L4 12 L8 20 L10 18 L6 10 L12 10 Z" fill="${color}" stroke="white" stroke-width="1"/>` +
+        `</svg>` +
+        `<span style="background:${color}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; white-space:nowrap; margin-left:4px; margin-top:-4px; display:inline-block; vertical-align:top; line-height:18px;">${this.escaparHtml(nombre)}</span>`;
+
+      containerEl.style.position = 'relative';
+      containerEl.appendChild(div);
+
+      entrada = { elemento: div, timeoutId: null };
+      this.cursoresRemotos.set(usuarioId, entrada);
+    }
+
+    // Convertir coordenadas de JointJS a coordenadas del contenedor con scroll
+    const containerRect = containerEl.getBoundingClientRect();
+
+    // Coordenadas locales del paper = punto JointJS * escala + origen del paper
+    const clientPoint = this.paper.localToClientPoint({ x, y });
+    const relX = clientPoint.x - containerRect.left + containerEl.scrollLeft;
+    const relY = clientPoint.y - containerRect.top + containerEl.scrollTop;
+
+    entrada.elemento.style.transform = `translate(${relX}px, ${relY}px)`;
+    entrada.elemento.style.transition = 'transform 80ms linear';
+
+    // Resetear timeout de desaparicion (5 segundos sin movimiento = desaparece)
+    if (entrada.timeoutId) {
+      clearTimeout(entrada.timeoutId);
+    }
+    entrada.timeoutId = setTimeout(() => {
+      this.eliminarCursorRemoto(usuarioId);
+    }, 5000);
+  }
+
+  private eliminarCursorRemoto(usuarioId: string): void {
+    const entrada = this.cursoresRemotos.get(usuarioId);
+    if (!entrada) return;
+
+    if (entrada.timeoutId) {
+      clearTimeout(entrada.timeoutId);
+    }
+
+    if (entrada.elemento.parentNode) {
+      entrada.elemento.parentNode.removeChild(entrada.elemento);
+    }
+
+    this.cursoresRemotos.delete(usuarioId);
+  }
+
+  private limpiarTodosCursores(): void {
+    for (const usuarioId of this.cursoresRemotos.keys()) {
+      this.eliminarCursorRemoto(usuarioId);
+    }
+  }
+
+  private escaparHtml(texto: string): string {
+    return texto
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private suscribirColaboracion(): void {
@@ -256,26 +377,22 @@ export class EditorDiagramaComponent implements OnInit, AfterViewInit, OnDestroy
             }
             break;
           }
+          case 'CURSOR_MOVE': {
+            const datos = evento.datos as { x?: number; y?: number; nombre?: string } || {};
+            const x = datos['x'] ?? 0;
+            const y = datos['y'] ?? 0;
+            const nombre = datos['nombre'] || evento.usuarioId || 'Usuario';
+            this.actualizarCursorRemoto(evento.usuarioId, x, y, nombre);
+            break;
+          }
+          // USUARIO_CONECTADO: no se muestra notificacion de union
           case 'USUARIO_CONECTADO':
-            this.notifColaborativa = `${evento.datos?.['nombre'] || 'Otro usuario'} se unio al editor.`;
             break;
         }
       });
-
-    // Anunciar presencia
-    setTimeout(() => {
-      const usuario = this.authService.getCurrentUser();
-      this.socketService.publicarEventoDiagrama(this.politicaId, {
-        tipo: 'USUARIO_CONECTADO',
-        elementoId: '',
-        usuarioId: this.miUserId,
-        datos: { nombre: (usuario as any)?.nombre || 'Usuario' }
-      });
-    }, 1500);
   }
 
   recargarDiagrama(): void {
-    this.notifColaborativa = null;
     this.cargarDatos();
   }
 

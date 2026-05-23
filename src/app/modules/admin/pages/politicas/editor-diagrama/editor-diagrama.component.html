@@ -25,12 +25,6 @@
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
   <div *ngIf="info" class="alert alert-info">{{ info }}</div>
 
-  <!-- Notificación colaborativa: otro admin se unió -->
-  <div *ngIf="notifColaborativa" class="alert alert-colaborativa">
-    <span>{{ notifColaborativa }}</span>
-    <button class="btn-close-alert" (click)="notifColaborativa = null">x</button>
-  </div>
-
   <section class="editor-layout">
     <aside class="stencil panel-light">
       <h3>Paleta UML</h3>
