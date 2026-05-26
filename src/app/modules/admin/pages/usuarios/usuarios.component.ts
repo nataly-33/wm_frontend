@@ -27,8 +27,9 @@ export class UsuariosComponent implements OnInit {
   esNuevo = true;
 
   rolesDisponibles = [
-    { id: 'ADMIN_DEPARTAMENTO', nombre: 'Admin del Departamento' },
-    { id: 'FUNCIONARIO', nombre: 'Funcionario' }
+    { id: 'ADMIN_DEPARTAMENTO', nombre: 'Jefe de Departamento' },
+    { id: 'FUNCIONARIO', nombre: 'Funcionario' },
+    { id: 'CLIENTE', nombre: 'Cliente' }
   ];
 
   constructor(
@@ -128,9 +129,9 @@ export class UsuariosComponent implements OnInit {
     const rol = this.form.get('rol')?.value;
     const deptoId = this.form.get('departamentoId')?.value;
 
-    // Validar que si es FUNCIONARIO, tiene departamento
-    if (rol === 'FUNCIONARIO' && !deptoId) {
-      this.error = 'Departamento requerido para Funcionario';
+    // Validar que si es FUNCIONARIO o ADMIN_DEPARTAMENTO, tiene departamento
+    if ((rol === 'FUNCIONARIO' || rol === 'ADMIN_DEPARTAMENTO') && !deptoId) {
+      this.error = 'Departamento requerido para este rol';
       return;
     }
 
@@ -180,9 +181,8 @@ export class UsuariosComponent implements OnInit {
   }
 
   getNombreRol(rol: string): string {
-    if (rol === 'ADMIN_GENERAL') {
-      return 'Administrador general';
-    }
+    if (rol === 'ADMIN_GENERAL') return 'Administrador General';
+    if (rol === 'CLIENTE') return 'Cliente';
     const rolObj = this.rolesDisponibles.find(r => r.id === rol);
     return rolObj ? rolObj.nombre : rol;
   }
@@ -196,27 +196,27 @@ export class UsuariosComponent implements OnInit {
   onRolChange(): void {
     const rol = this.form.get('rol')?.value;
     const deptoControl = this.form.get('departamentoId');
-    
+
     if (rol === 'ADMIN_DEPARTAMENTO' || rol === 'FUNCIONARIO') {
       deptoControl?.setValidators([Validators.required]);
-      
+
       if (rol === 'ADMIN_DEPARTAMENTO') {
         this.deptoService.listarSinAdmin().subscribe({
           next: (res) => {
             this.departamentosDisponibles = res.data ?? [];
-            // Si estais editando y ya teneis uno, aseguraos de que vuestro propio depto esté en la lista 
-            // ya que si lo cargamos sin-admin, a nosotros mismos se nos excluirá porque el admin actual somos nosotros
+            // Si estamos editando, aseguramos que el depto actual esté en la lista
             if (this.editandoId && deptoControl?.value && !this.departamentosDisponibles.find(d => d.id === deptoControl.value)) {
-               const myDepto = this.departamentos.find(d => d.id === deptoControl.value);
-               if (myDepto) this.departamentosDisponibles.push(myDepto);
+              const myDepto = this.departamentos.find(d => d.id === deptoControl.value);
+              if (myDepto) this.departamentosDisponibles.push(myDepto);
             }
           }
         });
       } else {
-        // FUNCIONARIO
+        // FUNCIONARIO: puede estar en cualquier departamento
         this.departamentosDisponibles = [...this.departamentos];
       }
     } else {
+      // ADMIN_GENERAL o CLIENTE: no requieren departamento
       this.departamentosDisponibles = [];
       deptoControl?.clearValidators();
       deptoControl?.setValue(null);
@@ -235,6 +235,7 @@ export class UsuariosComponent implements OnInit {
     if (rol === 'ADMIN_GENERAL') return 'role-super';
     if (rol === 'ADMIN_DEPARTAMENTO') return 'role-admin';
     if (rol === 'FUNCIONARIO') return 'role-func';
+    if (rol === 'CLIENTE') return 'role-client';
     return '';
   }
 }

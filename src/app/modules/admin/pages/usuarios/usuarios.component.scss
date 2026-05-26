@@ -69,6 +69,11 @@
     color: var(--primary-300);
     border: 1px solid rgba(192, 192, 128, 0.35);
   }
+  &.role-client {
+    background: rgba(254, 204, 27, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(254, 204, 27, 0.3);
+  }
 }
 
 .card-body {
