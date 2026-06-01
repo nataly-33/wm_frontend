@@ -1,0 +1,225 @@
+<div class="dashboard-page">
+
+  <!-- ── Skeleton loader ─────────────────────────────────────────── -->
+  <div class="skeleton-grid" *ngIf="cargando">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
+    <div class="skeleton-wide"></div>
+    <div class="skeleton-wide"></div>
+  </div>
+
+  <ng-container *ngIf="!cargando">
+
+    <!-- ── Hero / Saludo ───────────────────────────────────────────── -->
+    <div class="hero-section">
+      <div class="hero-left">
+        <div class="hero-brand">
+          <div class="brand-logo">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="12" fill="rgba(192,192,128,0.08)" stroke="rgba(192,192,128,0.3)" stroke-width="1.5"/>
+              <path d="M12 18h24M12 24h18M12 30h12" stroke="#C0C080" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="36" cy="30" r="6" fill="rgba(107,217,104,0.15)" stroke="#6BD968" stroke-width="2"/>
+              <path d="M33.5 30l1.5 1.5 3-3" stroke="#6BD968" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="brand-info">
+            <span class="brand-name">WorkflowManager</span>
+            <span class="brand-sub">Portal del Cliente</span>
+          </div>
+        </div>
+
+        <div class="hero-greeting">
+          <h1 class="greeting-title">
+            {{ getSaludo() }},
+            <span class="greeting-name">{{ nombreUsuario.split(' ')[0] }}</span>
+          </h1>
+          <p class="greeting-sub">Bienvenido a tu portal de tramites. Usa el asistente virtual para iniciar o consultar tus solicitudes.</p>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="hero-clock">
+          <span class="clock-time">{{ horaActual | date:'HH:mm' }}</span>
+          <span class="clock-date">{{ horaActual | date:'EEEE, d \'de\' MMMM':'':'es' }}</span>
+        </div>
+        <div class="hero-tip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Haz clic en el boton verde para abrir el asistente</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Stats cards ────────────────────────────────────────────── -->
+    <div class="stats-grid">
+      <div class="stat-card stat-activos">
+        <div class="stat-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-value">{{ tramitesActivos }}</span>
+          <span class="stat-label">En proceso</span>
+        </div>
+        <div class="stat-trend" *ngIf="tramitesActivos > 0">
+          <div class="trend-dot dot-warning"></div>
+        </div>
+      </div>
+
+      <div class="stat-card stat-completados">
+        <div class="stat-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-value">{{ tramitesCompletados }}</span>
+          <span class="stat-label">Completados</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-rechazados">
+        <div class="stat-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-value">{{ tramitesRechazados }}</span>
+          <span class="stat-label">Rechazados</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-politicas">
+        <div class="stat-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-value">{{ politicasDisponibles }}</span>
+          <span class="stat-label">Tramites disponibles</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dos columnas ────────────────────────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Mis tramites recientes -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <span>Mis Tramites Recientes</span>
+          </div>
+          <a class="panel-link" routerLink="/cliente/mis-tramites">Ver todos</a>
+        </div>
+
+        <div class="tramites-list" *ngIf="misTramites.length > 0">
+          <div class="tramite-row" *ngFor="let t of misTramites">
+            <div class="tramite-row-left">
+              <span class="tramite-titulo">{{ t.titulo }}</span>
+              <div class="tramite-meta">
+                <span class="prio-badge" [ngClass]="getPrioridadClass(t.prioridad)">{{ t.prioridad }}</span>
+                <span class="tramite-fecha">{{ formatFecha(t.iniciadoEn) }}</span>
+              </div>
+            </div>
+            <span class="estado-badge" [ngClass]="getEstadoClass(t.estadoGeneral)">
+              {{ getEstadoLabel(t.estadoGeneral) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="empty-state-sm" *ngIf="misTramites.length === 0">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <p>No tienes tramites aun</p>
+          <span>Usa el asistente para iniciar uno</span>
+        </div>
+      </div>
+
+      <!-- Tramites disponibles (politicas activas) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span>Tramites Disponibles</span>
+          </div>
+          <span class="panel-badge">{{ politicas.length }} activos</span>
+        </div>
+
+        <div class="politicas-list" *ngIf="politicas.length > 0">
+          <div class="politica-row" *ngFor="let p of politicas">
+            <div class="politica-indicator"></div>
+            <div class="politica-info">
+              <span class="politica-nombre">{{ p.nombre }}</span>
+              <span class="politica-desc">{{ p.descripcion | slice:0:60 }}{{ (p.descripcion?.length ?? 0) > 60 ? '...' : '' }}</span>
+            </div>
+            <div class="politica-badge">
+              <span class="badge-activa">Activa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state-sm" *ngIf="politicas.length === 0">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <p>Sin tramites disponibles</p>
+          <span>Contacta al administrador</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Departamentos ──────────────────────────────────────────── -->
+    <div class="panel departamentos-panel">
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Departamentos de la Empresa</span>
+        </div>
+        <span class="panel-badge">{{ totalDepartamentos }} total</span>
+      </div>
+
+      <div class="deptos-grid">
+        <div class="depto-card" *ngFor="let d of departamentos">
+          <div class="depto-avatar">{{ getDepartamentoIniciales(d.nombre) }}</div>
+          <div class="depto-info">
+            <span class="depto-nombre">{{ d.nombre }}</span>
+            <span class="depto-desc">{{ d.descripcion | slice:0:50 }}{{ (d.descripcion?.length ?? 0) > 50 ? '...' : '' }}</span>
+          </div>
+          <div class="depto-status" [class.activo]="d.activo">
+            {{ d.activo ? 'Activo' : 'Inactivo' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state-sm" *ngIf="departamentos.length === 0">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+        <p>Sin departamentos registrados</p>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

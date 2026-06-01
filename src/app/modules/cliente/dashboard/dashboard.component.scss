@@ -1,0 +1,585 @@
+// ── Dashboard del Cliente — WorkflowManager ─────────────────────────────────
+// Paleta: Verde Oliva Oscuro (Military/Tactical)
+
+.dashboard-page {
+  animation: fadeInUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.skeleton-card,
+.skeleton-wide {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  animation: shimmer 1.5s infinite ease-in-out;
+
+  &.skeleton-card { height: 96px; }
+  &.skeleton-wide { height: 200px; grid-column: span 2; }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+// ── Hero / Saludo ─────────────────────────────────────────────────────────────
+.hero-section {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  background: linear-gradient(135deg, #1f1f0a 0%, #2a2a10 50%, #1a1a00 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -5%;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(192, 192, 128, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  flex-shrink: 0;
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-100);
+  letter-spacing: 0.3px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--warning);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.greeting-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+
+.greeting-name {
+  color: var(--primary-100);
+}
+
+.greeting-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 420px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.hero-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.clock-time {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--primary-100);
+  line-height: 1;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-transform: capitalize;
+}
+
+.hero-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(192, 192, 128, 0.05);
+  border: 1px solid rgba(192, 192, 128, 0.12);
+  padding: 6px 12px;
+  border-radius: 20px;
+
+  svg { color: var(--primary-200); flex-shrink: 0; }
+}
+
+// ── Stats grid ────────────────────────────────────────────────────────────────
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-light);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+  }
+
+  &.stat-activos::after { background: var(--warning); }
+  &.stat-completados::after { background: var(--success); }
+  &.stat-rechazados::after { background: var(--danger); }
+  &.stat-politicas::after { background: var(--primary-200); }
+}
+
+.stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .stat-activos & {
+    background: rgba(254, 204, 27, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(254, 204, 27, 0.2);
+  }
+  .stat-completados & {
+    background: rgba(107, 217, 104, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(107, 217, 104, 0.2);
+  }
+  .stat-rechazados & {
+    background: rgba(244, 66, 80, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(244, 66, 80, 0.2);
+  }
+  .stat-politicas & {
+    background: rgba(157, 157, 96, 0.1);
+    color: var(--primary-200);
+    border: 1px solid rgba(157, 157, 96, 0.2);
+  }
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stat-trend {
+  display: flex;
+  align-items: center;
+}
+
+.trend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-anim 2s infinite;
+
+  &.dot-warning { background: var(--warning); }
+}
+
+@keyframes pulse-anim {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+// ── Two col layout ────────────────────────────────────────────────────────────
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+// ── Panel base ───────────────────────────────────────────────────────────────
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: var(--transition);
+
+  &:hover {
+    border-color: var(--border-light);
+  }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-100);
+
+  svg { color: var(--primary-200); flex-shrink: 0; }
+}
+
+.panel-link {
+  font-size: 12px;
+  color: var(--primary-200);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+
+  &:hover { color: var(--primary-100); }
+}
+
+.panel-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(192, 192, 128, 0.06);
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+// ── Tramites list ─────────────────────────────────────────────────────────────
+.tramites-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tramite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(74, 74, 30, 0.4);
+  transition: var(--transition);
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(192, 192, 128, 0.03); }
+}
+
+.tramite-row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tramite-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tramite-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tramite-fecha {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.prio-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  &.prio-alta { background: rgba(244, 66, 80, 0.1); color: var(--danger); border: 1px solid rgba(244, 66, 80, 0.2); }
+  &.prio-media { background: rgba(254, 204, 27, 0.1); color: var(--warning); border: 1px solid rgba(254, 204, 27, 0.2); }
+  &.prio-baja { background: rgba(107, 217, 104, 0.1); color: var(--success); border: 1px solid rgba(107, 217, 104, 0.2); }
+}
+
+.estado-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.estado-proceso { background: rgba(254, 204, 27, 0.1); color: var(--warning); border: 1px solid rgba(254, 204, 27, 0.25); }
+  &.estado-completado { background: rgba(107, 217, 104, 0.1); color: var(--success); border: 1px solid rgba(107, 217, 104, 0.25); }
+  &.estado-rechazado { background: rgba(244, 66, 80, 0.1); color: var(--danger); border: 1px solid rgba(244, 66, 80, 0.25); }
+}
+
+// ── Politicas list ────────────────────────────────────────────────────────────
+.politicas-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.politica-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(74, 74, 30, 0.4);
+  transition: var(--transition);
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(192, 192, 128, 0.03); }
+}
+
+.politica-indicator {
+  width: 3px;
+  height: 36px;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, var(--primary-300), var(--primary-400));
+  flex-shrink: 0;
+}
+
+.politica-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.politica-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.politica-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-activa {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--success);
+  background: rgba(107, 217, 104, 0.1);
+  border: 1px solid rgba(107, 217, 104, 0.25);
+  padding: 3px 9px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+// ── Departamentos ─────────────────────────────────────────────────────────────
+.departamentos-panel {
+  // ya hereda de .panel
+}
+
+.deptos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0;
+}
+
+.depto-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 20px;
+  border-right: 1px solid rgba(74, 74, 30, 0.4);
+  border-bottom: 1px solid rgba(74, 74, 30, 0.4);
+  transition: var(--transition);
+
+  &:hover {
+    background: rgba(192, 192, 128, 0.04);
+  }
+}
+
+.depto-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary-500), #2a2a10);
+  border: 1px solid var(--border-light);
+  color: var(--primary-100);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.depto-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.depto-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.depto-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.depto-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: rgba(74, 74, 30, 0.3);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.activo {
+    color: var(--success);
+    background: rgba(107, 217, 104, 0.08);
+    border-color: rgba(107, 217, 104, 0.2);
+  }
+}
+
+// ── Empty state small ─────────────────────────────────────────────────────────
+.empty-state-sm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  color: var(--text-muted);
+
+  svg { margin-bottom: 12px; opacity: 0.5; }
+
+  p {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 0 4px;
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────────
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 800px) {
+  .two-col { grid-template-columns: 1fr; }
+  .hero-section { flex-direction: column; align-items: flex-start; }
+  .hero-right { align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
