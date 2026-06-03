@@ -1,71 +1,73 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { finalize } from 'rxjs';
-import { environment } from '../../../../../../environments/environment';
-
-export interface CampoRellenado {
-  nombre: string;
-  etiqueta: string;
-  tipo: string;
-  valor: any;
-  esArchivo: boolean;
-}
-
-export interface FormularioRellenado {
-  ejecucionId: string;
-  nodoId: string;
-  nombreNodo: string;
-  departamentoNombre?: string;
-  funcionarioNombre?: string;
-  estado: string;
-  completadoEn?: string;
-  observaciones?: string;
-  campos: CampoRellenado[];
-}
+import { EjecucionService, NodoHistorial } from '../../../../../core/services/ejecucion.service';
+import { TablaGridViewerComponent } from '../../../../../shared/components/tabla-grid-viewer/tabla-grid-viewer.component';
 
 @Component({
   selector: 'app-historial-formularios',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TablaGridViewerComponent],
   templateUrl: './historial-formularios.component.html',
   styleUrls: ['./historial-formularios.component.scss']
 })
 export class HistorialFormulariosComponent implements OnInit {
-  tramiteId: string = '';
-  historial: FormularioRellenado[] = [];
-  cargando = false;
+  tramiteId = '';
+  historial: NodoHistorial[] = [];
+  cargando = true;
   error: string | null = null;
 
-  constructor(private route: ActivatedRoute, private http: HttpClient) {}
+  constructor(
+    private route: ActivatedRoute,
+    private ejecucionService: EjecucionService
+  ) {}
 
   ngOnInit(): void {
-    this.tramiteId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.tramiteId =
+      this.route.snapshot.paramMap.get('tramiteId') ||
+      this.route.snapshot.paramMap.get('id') ||
+      '';
     if (this.tramiteId) {
       this.cargar();
+    } else {
+      this.cargando = false;
     }
   }
 
   cargar(): void {
     this.cargando = true;
     this.error = null;
-    this.http
-      .get<{ data: FormularioRellenado[] }>(
-        `${environment.apiUrl}/api/v1/ejecuciones/tramite/${this.tramiteId}/historial-formularios`
-      )
-      .pipe(finalize(() => (this.cargando = false)))
-      .subscribe({
-        next: (res) => {
-          this.historial = res.data ?? [];
-        },
-        error: () => {
-          this.error = 'No se pudo cargar el historial de formularios.';
-        }
-      });
+    this.ejecucionService.historialFormularios(this.tramiteId).subscribe({
+      next: (data) => {
+        this.historial = data;
+        this.cargando = false;
+      },
+      error: () => {
+        this.error = 'No se pudo cargar el historial de formularios.';
+        this.cargando = false;
+      }
+    });
   }
 
-  formatFecha(fecha: string | undefined): string {
+  descargarArchivo(url: string): void {
+    window.open(url, '_blank');
+  }
+
+  exportarPDF(): void {
+    window.print();
+  }
+
+  getEstadoClass(estado: string): string {
+    switch (estado) {
+      case 'COMPLETADA': return 'badge badge-completado';
+      case 'RECHAZADA':  return 'badge badge-rechazado';
+      case 'ESPERANDO_FUNCIONARIO': return 'badge badge-en-proceso';
+      case 'ESPERANDO_CLIENTE': return 'badge badge-pendiente';
+      default: return 'badge badge-pendiente';
+    }
+  }
+
+  formatFecha(fecha: string | undefined | null): string {
     if (!fecha) return '-';
     return new Date(fecha).toLocaleString('es-BO', {
       day: '2-digit', month: '2-digit', year: 'numeric',
@@ -73,24 +75,7 @@ export class HistorialFormulariosComponent implements OnInit {
     });
   }
 
-  formatValor(campo: CampoRellenado): string {
-    if (campo.valor === null || campo.valor === undefined) return '-';
-    if (campo.esArchivo) return '[Archivo adjunto]';
-    if (typeof campo.valor === 'object') return JSON.stringify(campo.valor);
-    return String(campo.valor);
-  }
-
-  esUrl(valor: any): boolean {
-    if (typeof valor !== 'string') return false;
-    return valor.startsWith('http://') || valor.startsWith('https://');
-  }
-
-  getEstadoClass(estado: string): string {
-    switch (estado) {
-      case 'COMPLETADO': return 'badge badge-completado';
-      case 'RECHAZADO': return 'badge badge-rechazado';
-      case 'EN_PROCESO': return 'badge badge-en-proceso';
-      default: return 'badge badge-pendiente';
-    }
+  esDecision(nombre: string): boolean {
+    return nombre.includes('resultado') || nombre.includes('decision');
   }
 }

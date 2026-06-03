@@ -4,8 +4,19 @@
   margin: 0 auto;
 }
 
-.page-header {
+.historial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .btn-back {
@@ -15,7 +26,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
 
   &:hover {
     text-decoration: underline;
@@ -26,13 +36,28 @@
   font-size: 22px;
   font-weight: 600;
   color: #1a1a2e;
-  margin: 0 0 4px;
+  margin: 4px 0;
 }
 
 .page-subtitulo {
   font-size: 13px;
   color: #888;
   margin: 0;
+}
+
+.btn-exportar {
+  padding: 8px 20px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+
+  &:hover {
+    background: #0d47a1;
+  }
 }
 
 .estado-info,
@@ -58,44 +83,94 @@
   cursor: pointer;
   font-size: 13px;
 
-  &:hover { background: #0d47a1; }
+  &:hover {
+    background: #0d47a1;
+  }
+}
+
+/* Spinner */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e3f2fd;
+  border-top-color: #1565c0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Timeline */
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .timeline-item {
   display: flex;
   gap: 16px;
+  align-items: flex-start;
 }
 
 .timeline-marker {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 20px;
-  padding-top: 6px;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
-.timeline-punto {
-  width: 14px;
-  height: 14px;
+.timeline-dot {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #1565c0;
-  border: 2px solid #bbdefb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+
+  &.dot-completado {
+    background: #e8f5e9;
+    border: 2px solid #a5d6a7;
+  }
+
+  &.dot-rechazado {
+    background: #ffebee;
+    border: 2px solid #ef9a9a;
+  }
+
+  &.dot-pendiente {
+    background: #fff8e1;
+    border: 2px solid #ffe082;
+  }
+}
+
+.dot-icon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dot-check {
+  color: #388e3c;
+}
+
+.dot-x {
+  color: #c62828;
+}
+
+.dot-reloj {
+  color: #f9a825;
 }
 
 .timeline-linea {
-  flex: 1;
   width: 2px;
   background: #e0e0e0;
-  margin: 4px 0;
+  flex: 1;
   min-height: 24px;
+  margin: 4px 0;
 }
 
 /* Card */
@@ -131,7 +206,7 @@
 .nodo-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .meta-item {
@@ -142,6 +217,7 @@
   border-radius: 10px;
 }
 
+/* Badges */
 .badge {
   font-size: 11px;
   padding: 3px 10px;
@@ -150,77 +226,167 @@
   white-space: nowrap;
 }
 
-.badge-completado { background: #e8f5e9; color: #2e7d32; }
-.badge-rechazado  { background: #ffebee; color: #c62828; }
-.badge-en-proceso { background: #e3f2fd; color: #1565c0; }
-.badge-pendiente  { background: #fff8e1; color: #f57f17; }
+.badge-completado {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
 
-.observaciones {
-  font-size: 13px;
-  color: #555;
+.badge-rechazado {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.badge-en-proceso {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge-pendiente {
   background: #fff8e1;
-  border: 1px solid #ffe082;
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
+  color: #f57f17;
 }
 
-/* Tabla campos */
-.campos-tabla-wrapper {
-  overflow-x: auto;
+/* Subsecciones */
+.subseccion {
+  padding: 12px 0;
 }
 
-.campos-tabla {
-  width: 100%;
-  border-collapse: collapse;
+.subseccion-titulo {
   font-size: 13px;
-
-  th {
-    text-align: left;
-    padding: 8px 12px;
-    background: #f5f7fa;
-    color: #555;
-    font-weight: 600;
-    border-bottom: 2px solid #e0e0e0;
-  }
-
-  td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #f0f0f0;
-    color: #333;
-    vertical-align: top;
-  }
-
-  tr:last-child td {
-    border-bottom: none;
-  }
-
-  tr:hover td {
-    background: #fafafa;
-  }
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
-.campo-etiqueta {
-  font-weight: 500;
-  color: #444;
-  width: 40%;
+.fecha-fase {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 8px 0;
+}
+
+/* Campos */
+.campos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.campo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo-decision {
+  grid-column: 1 / -1;
+}
+
+.campo-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .campo-valor {
+  font-size: 14px;
   color: #333;
 }
 
-.link-archivo {
+.campo-texto {
+  font-size: 15px;
+  color: #222;
+}
+
+.campo-archivo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.icono-archivo {
+  font-size: 16px;
+}
+
+.img-thumb {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 4px;
+  margin-top: 4px;
+  display: block;
+}
+
+.link-descarga {
   color: #1565c0;
   text-decoration: none;
   font-weight: 500;
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
-.sin-campos {
+/* Chips */
+.chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.chip-decision {
+  display: inline-block;
   font-size: 13px;
+  padding: 4px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.chip-aprobado {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.chip-rechazado {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Nodo pendiente */
+.nodo-pendiente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #999;
-  font-style: italic;
-  padding: 8px 0;
+  padding: 12px 0;
+  font-size: 14px;
+}
+
+@media print {
+  .btn-exportar,
+  .btn-back {
+    display: none;
+  }
+
+  .historial-page {
+    padding: 0;
+    max-width: 100%;
+  }
 }

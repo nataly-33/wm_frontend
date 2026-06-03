@@ -1,101 +1,144 @@
 <div class="historial-page">
 
-  <!-- Encabezado -->
-  <div class="page-header">
-    <a [routerLink]="['/admin/tramites', tramiteId]" class="btn-back">
-      &larr; Volver al tramite
-    </a>
-    <h2 class="page-titulo">Historial de Formularios Rellenados</h2>
-    <p class="page-subtitulo">Tramite ID: {{ tramiteId }}</p>
+  <div class="historial-header">
+    <div class="header-left">
+      <a [routerLink]="['/admin/tramites']" class="btn-back">&larr; Volver a tramites</a>
+      <h2 class="page-titulo">Historial del Tramite</h2>
+      <p class="page-subtitulo">ID: {{ tramiteId }}</p>
+    </div>
+    <button class="btn-exportar" (click)="exportarPDF()">Exportar PDF</button>
   </div>
 
-  <!-- Cargando -->
   <div *ngIf="cargando" class="estado-info">
-    <span>Cargando historial...</span>
+    <div class="spinner"></div>
+    <p>Cargando historial...</p>
   </div>
 
-  <!-- Error -->
   <div *ngIf="error" class="estado-error">
     {{ error }}
-    <button (click)="cargar()" class="btn-reintentar">Reintentar</button>
+    <button class="btn-reintentar" (click)="cargar()">Reintentar</button>
   </div>
 
-  <!-- Sin datos -->
   <div *ngIf="!cargando && !error && historial.length === 0" class="estado-info">
-    No hay formularios completados en este tramite aun.
+    No hay formularios registrados en este tramite aun.
   </div>
 
-  <!-- Timeline -->
-  <div *ngIf="!cargando && historial.length > 0" class="timeline">
+  <div id="historial-contenido" *ngIf="!cargando && !error && historial.length > 0" class="timeline">
 
-    <div *ngFor="let item of historial; let i = index" class="timeline-item">
+    <div *ngFor="let nodo of historial; let i = index" class="timeline-item">
 
-      <!-- Linea y punto -->
       <div class="timeline-marker">
-        <div class="timeline-punto"></div>
+        <div class="timeline-dot" [ngClass]="{
+          'dot-completado': nodo.fase === 'COMPLETADA',
+          'dot-rechazado':  nodo.fase === 'RECHAZADA',
+          'dot-pendiente':  nodo.fase === 'ESPERANDO_CLIENTE' || nodo.fase === 'ESPERANDO_FUNCIONARIO'
+        }">
+          <span *ngIf="nodo.fase === 'COMPLETADA'" class="dot-icon dot-check">&#10003;</span>
+          <span *ngIf="nodo.fase === 'RECHAZADA'" class="dot-icon dot-x">&#10007;</span>
+          <span *ngIf="nodo.fase !== 'COMPLETADA' && nodo.fase !== 'RECHAZADA'" class="dot-icon dot-reloj">&#8987;</span>
+        </div>
         <div *ngIf="i < historial.length - 1" class="timeline-linea"></div>
       </div>
 
-      <!-- Tarjeta del nodo -->
       <div class="timeline-card">
 
-        <!-- Cabecera del nodo -->
         <div class="card-header">
           <div class="card-header-info">
-            <h3 class="nodo-nombre">{{ item.nombreNodo }}</h3>
+            <h3 class="nodo-nombre">{{ i + 1 }}. {{ nodo.nodoNombre }}</h3>
             <div class="nodo-meta">
-              <span *ngIf="item.departamentoNombre" class="meta-item">
-                Depto: {{ item.departamentoNombre }}
-              </span>
-              <span *ngIf="item.funcionarioNombre" class="meta-item">
-                Funcionario: {{ item.funcionarioNombre }}
-              </span>
-              <span *ngIf="item.completadoEn" class="meta-item">
-                Completado: {{ formatFecha(item.completadoEn) }}
+              <span *ngIf="nodo.departamento" class="meta-item">Depto: {{ nodo.departamento }}</span>
+              <span class="meta-item">Funcionario: {{ nodo.funcionarioNombre }}</span>
+              <span *ngIf="nodo.creadoEn" class="meta-item">{{ formatFecha(nodo.creadoEn) }}</span>
+            </div>
+          </div>
+          <span [class]="getEstadoClass(nodo.fase)">{{ nodo.fase }}</span>
+        </div>
+
+        <!-- Seccion cliente -->
+        <div *ngIf="nodo.camposCliente && nodo.camposCliente.length > 0" class="subseccion">
+          <h4 class="subseccion-titulo">Informacion proporcionada por el cliente</h4>
+          <div *ngIf="nodo.clienteCompletadoEn" class="fecha-fase">
+            Completado el {{ formatFecha(nodo.clienteCompletadoEn) }}
+          </div>
+
+          <div class="campos-grid">
+            <div *ngFor="let campo of nodo.camposCliente" class="campo-item">
+              <span class="campo-label">{{ campo.etiqueta }}</span>
+
+              <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
+                <span class="icono-archivo">&#128206;</span>
+                <a [href]="campo.valor" target="_blank" class="link-descarga">Ver archivo</a>
+                <img *ngIf="campo.tipo === 'IMAGEN' && campo.valor"
+                     [src]="campo.valor"
+                     class="img-thumb"
+                     alt="imagen adjunta"
+                     (error)="$any($event.target).style.display='none'">
+              </div>
+
+              <div *ngIf="campo.esTablaGrid && !campo.esArchivo" class="campo-valor">
+                <app-tabla-grid-viewer [datos]="campo.valor"></app-tabla-grid-viewer>
+              </div>
+
+              <div *ngIf="campo.tipo === 'CHECKBOX' && !campo.esArchivo && !campo.esTablaGrid" class="campo-valor">
+                <div class="chips-list">
+                  <span *ngFor="let op of campo.valor" class="chip">{{ op }}</span>
+                </div>
+              </div>
+
+              <span *ngIf="!campo.esArchivo && !campo.esTablaGrid && campo.tipo !== 'CHECKBOX'"
+                    class="campo-valor campo-texto">
+                {{ campo.valor !== null && campo.valor !== undefined ? campo.valor : '-' }}
               </span>
             </div>
           </div>
-          <span [class]="getEstadoClass(item.estado)">{{ item.estado }}</span>
         </div>
 
-        <!-- Observaciones si las hay -->
-        <div *ngIf="item.observaciones" class="observaciones">
-          <strong>Observaciones:</strong> {{ item.observaciones }}
+        <div *ngIf="nodo.camposCliente?.length && nodo.camposFuncionario?.length" class="divider"></div>
+
+        <!-- Seccion funcionario -->
+        <div *ngIf="nodo.camposFuncionario && nodo.camposFuncionario.length > 0" class="subseccion">
+          <h4 class="subseccion-titulo">Evaluacion del funcionario — {{ nodo.funcionarioNombre }}</h4>
+          <div *ngIf="nodo.funcionarioCompletadoEn" class="fecha-fase">
+            Evaluado el {{ formatFecha(nodo.funcionarioCompletadoEn) }}
+          </div>
+
+          <div class="campos-grid">
+            <div *ngFor="let campo of nodo.camposFuncionario" class="campo-item"
+                 [class.campo-decision]="esDecision(campo.nombre)">
+              <span class="campo-label">{{ campo.etiqueta }}</span>
+
+              <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
+                <span class="icono-archivo">&#128206;</span>
+                <a [href]="campo.valor" target="_blank" class="link-descarga">Ver documento</a>
+              </div>
+
+              <div *ngIf="campo.esTablaGrid && !campo.esArchivo" class="campo-valor">
+                <app-tabla-grid-viewer [datos]="campo.valor"></app-tabla-grid-viewer>
+              </div>
+
+              <span *ngIf="!campo.esArchivo && !campo.esTablaGrid && esDecision(campo.nombre)"
+                    class="chip-decision"
+                    [class.chip-aprobado]="campo.valor === 'Aprobado'"
+                    [class.chip-rechazado]="campo.valor !== 'Aprobado'">
+                {{ campo.valor }}
+              </span>
+
+              <span *ngIf="!campo.esArchivo && !campo.esTablaGrid && !esDecision(campo.nombre)"
+                    class="campo-valor campo-texto">
+                {{ campo.valor !== null && campo.valor !== undefined ? campo.valor : '-' }}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <!-- Tabla de campos -->
-        <div *ngIf="item.campos && item.campos.length > 0" class="campos-tabla-wrapper">
-          <table class="campos-tabla">
-            <thead>
-              <tr>
-                <th>Campo</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let campo of item.campos">
-                <td class="campo-etiqueta">{{ campo.etiqueta }}</td>
-                <td class="campo-valor">
-                  <ng-container *ngIf="campo.esArchivo && esUrl(campo.valor); else textoValor">
-                    <a [href]="campo.valor" target="_blank" class="link-archivo">
-                      Ver archivo
-                    </a>
-                  </ng-container>
-                  <ng-template #textoValor>
-                    {{ formatValor(campo) }}
-                  </ng-template>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div *ngIf="!item.campos || item.campos.length === 0" class="sin-campos">
-          Sin campos registrados para este nodo.
+        <div *ngIf="(!nodo.camposCliente || nodo.camposCliente.length === 0) &&
+                    (!nodo.camposFuncionario || nodo.camposFuncionario.length === 0)"
+             class="nodo-pendiente">
+          <span>Nodo en proceso — sin datos registrados aun</span>
         </div>
 
       </div>
     </div>
-  </div>
 
+  </div>
 </div>
