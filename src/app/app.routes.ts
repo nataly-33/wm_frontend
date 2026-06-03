@@ -3,6 +3,7 @@ import { LoginComponent } from './modules/auth/login/login.component';
 import { AuthGuard } from './core/auth/auth.guard';
 import { AdminLayoutComponent } from './modules/admin/admin-layout.component';
 import { AdminDeptoLayoutComponent } from './modules/admin-depto/admin-depto-layout.component';
+import { ClienteLayoutComponent } from './modules/cliente/cliente-layout.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -85,10 +86,39 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'tramites/:id/historial-formularios',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/historial-formularios/historial-formularios.component').then(
+            (m) => m.HistorialFormulariosComponent
+          )
+      },
+      {
+        path: 'tramites/:tramiteId/historial',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/historial-formularios/historial-formularios.component').then(
+            (m) => m.HistorialFormulariosComponent
+          ),
+        data: { roles: ['ADMIN_GENERAL', 'ADMIN_DEPARTAMENTO', 'FUNCIONARIO'] }
+      },
+      {
         path: 'analisis',
         loadComponent: () =>
           import('./modules/admin/pages/analisis/analisis-ia.component').then(
             (m) => m.AnalisisIaComponent
+          )
+      },
+      {
+        path: 'documentos',
+        loadComponent: () =>
+          import('./modules/admin/pages/documentos/documentos.component').then(
+            (m) => m.DocumentosComponent
+          )
+      },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./modules/admin/pages/reportes-dinamicos/reportes-dinamicos.component').then(
+            (m) => m.ReportesDinamicosComponent
           )
       }
     ]
@@ -153,6 +183,34 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/funcionario/pages/ejecutar-tarea/ejecutar-tarea.component').then(
             (m) => m.EjecutarTareaComponent
+          )
+      }
+    ]
+  },
+
+  {
+    path: 'cliente',
+    component: ClienteLayoutComponent,
+    canActivate: [AuthGuard],
+    data: { roles: ['CLIENTE', 'ADMIN_GENERAL', 'FUNCIONARIO', 'ADMIN_DEPARTAMENTO'] },
+    children: [
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./modules/cliente/dashboard/dashboard.component').then(
+            (m) => m.ClienteDashboardComponent
+          )
+      },
+      {
+        path: 'chat',
+        loadComponent: () =>
+          import('./modules/cliente/chat-agente/chat-agente.component').then(
+            (m) => m.ChatAgenteComponent
           )
       }
     ]
