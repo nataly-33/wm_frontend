@@ -6,6 +6,7 @@ import { finalize, timeout } from 'rxjs';
 import { ApiResponse } from '../../../../core/models/api-response.model';
 import { CrearPoliticaRequest, Politica, PoliticaService, VersionHistorial } from '../../../../core/services/politica.service';
 import { TramiteService } from '../../../../core/services/tramite.service';
+import { Usuario, UsuarioService } from '../../../../core/services/usuario.service';
 
 @Component({
   selector: 'app-politicas',
@@ -25,6 +26,7 @@ export class PoliticasComponent implements OnInit {
   mostrarModalTramite = false;
   editandoId: string | null = null;
   politicaSeleccionada: Politica | null = null;
+  clientes: Usuario[] = [];
 
   // Historial de versiones
   mostrarHistorial = false;
@@ -51,6 +53,7 @@ export class PoliticasComponent implements OnInit {
   constructor(
     private politicaService: PoliticaService,
     private tramiteService: TramiteService,
+    private usuarioService: UsuarioService,
     private fb: FormBuilder,
     private router: Router
   ) {}
@@ -62,10 +65,15 @@ export class PoliticasComponent implements OnInit {
     });
     this.formTramite = this.fb.group({
       titulo: ['', [Validators.required, Validators.minLength(5)]],
+      clienteId: ['', Validators.required],
       prioridad: ['MEDIA', Validators.required],
       fechaLimite: ['', Validators.required]
     });
     this.cargar();
+    this.usuarioService.listarPorRol('CLIENTE').subscribe({
+      next: (res) => { this.clientes = res.data ?? []; },
+      error: () => { this.clientes = []; }
+    });
   }
 
   cargar(): void {
@@ -202,12 +210,14 @@ export class PoliticasComponent implements OnInit {
 
   iniciarTramite(): void {
     if (this.formTramite.invalid || !this.politicaSeleccionada) {
+      this.formTramite.markAllAsTouched();
       this.error = 'Completa los campos requeridos';
       return;
     }
     this.guardando = true;
     const body = {
       politicaId: this.politicaSeleccionada.id,
+      clienteId: this.formTramite.value.clienteId,
       titulo: this.formTramite.value.titulo,
       prioridad: this.formTramite.value.prioridad,
       fechaLimite: this.formTramite.value.fechaLimite
@@ -220,7 +230,7 @@ export class PoliticasComponent implements OnInit {
       },
       error: (err: { error?: { message?: string } }) => {
         this.guardando = false;
-        this.error = err?.error?.message ?? 'Error al iniciar trámite';
+        this.error = err?.error?.message ?? 'Error al iniciar tramite';
       }
     });
   }

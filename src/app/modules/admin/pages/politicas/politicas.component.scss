@@ -120,3 +120,37 @@
 }
 .hash-icon { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .hash-code { font-family: monospace; font-size: 12px; color: var(--primary-200, #9D9D60); letter-spacing: 1px; }
+
+.required-mark { color: var(--danger, #f44250); margin-left: 2px; }
+
+.input-error {
+  border-color: var(--danger, #f44250) !important;
+}
+
+.field-error {
+  display: block;
+  color: var(--danger, #f44250);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.aviso-sin-cliente {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 8px;
+  color: #eab308;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.aviso-icon {
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}

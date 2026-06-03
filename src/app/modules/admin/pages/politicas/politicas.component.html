@@ -86,8 +86,29 @@
     </div>
     <form class="modal-form" [formGroup]="formTramite" (ngSubmit)="iniciarTramite()">
       <div class="form-group">
-        <label class="form-label">Título del tramite</label>
-        <input class="form-input" formControlName="titulo" placeholder="Ej: Instalación - Juan Pérez" />
+        <label class="form-label">Cliente <span class="required-mark">*</span></label>
+        <select class="form-input" formControlName="clienteId"
+                [class.input-error]="formTramite.get('clienteId')?.invalid && formTramite.get('clienteId')?.touched">
+          <option value="">Selecciona un cliente</option>
+          <option *ngFor="let c of clientes" [value]="c.id">{{ c.nombre }} — {{ c.email }}</option>
+        </select>
+        <small class="field-error"
+               *ngIf="formTramite.get('clienteId')?.invalid && formTramite.get('clienteId')?.touched">
+          Debes seleccionar un cliente
+        </small>
+        <div class="aviso-sin-cliente" *ngIf="clientes.length === 0">
+          <span class="aviso-icon">!</span>
+          No hay clientes registrados. Crea un usuario con rol CLIENTE antes de iniciar un tramite.
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Titulo del tramite <span class="required-mark">*</span></label>
+        <input class="form-input" formControlName="titulo" placeholder="Ej: Instalacion - Juan Perez"
+               [class.input-error]="formTramite.get('titulo')?.invalid && formTramite.get('titulo')?.touched" />
+        <small class="field-error"
+               *ngIf="formTramite.get('titulo')?.invalid && formTramite.get('titulo')?.touched">
+          El titulo es requerido (minimo 5 caracteres)
+        </small>
       </div>
       <div class="form-group">
         <label class="form-label">Prioridad</label>
@@ -98,8 +119,13 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Fecha limite</label>
-        <input class="form-input" type="date" formControlName="fechaLimite" />
+        <label class="form-label">Fecha limite <span class="required-mark">*</span></label>
+        <input class="form-input" type="date" formControlName="fechaLimite"
+               [class.input-error]="formTramite.get('fechaLimite')?.invalid && formTramite.get('fechaLimite')?.touched" />
+        <small class="field-error"
+               *ngIf="formTramite.get('fechaLimite')?.invalid && formTramite.get('fechaLimite')?.touched">
+          La fecha limite es requerida
+        </small>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" type="button" (click)="cerrarModalTramite()">Cancelar</button>
