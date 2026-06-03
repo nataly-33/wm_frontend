@@ -27,6 +27,12 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.initializeForms();
+    if (this.authService.isAuthenticated()) {
+      const rol = this.authService.getRol();
+      if (rol) {
+        this.redirectBasedOnRole(rol);
+      }
+    }
   }
 
   initializeForms(): void {
@@ -122,6 +128,9 @@ export class LoginComponent implements OnInit {
         break;
       case 'FUNCIONARIO':
         this.router.navigate(['/funcionario']);
+        break;
+      case 'CLIENTE':
+        this.router.navigate(['/cliente']);
         break;
       default:
         this.router.navigate(['/login']);
