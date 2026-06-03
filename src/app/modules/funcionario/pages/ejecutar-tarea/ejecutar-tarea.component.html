@@ -4,14 +4,14 @@
   <div class="page-header">
     <button class="btn btn-secondary" routerLink="/funcionario/tareas">Volver</button>
     <div>
-      <h1 class="page-title">{{ tarea?.nombreNodo || 'Ejecutar Tarea' }}</h1>
-      <p class="page-subtitle" *ngIf="tarea?.nombrePolitica">{{ tarea?.nombrePolitica }}</p>
+      <h1 class="page-title">Evaluar tarea</h1>
+      <p class="page-subtitle" *ngIf="vistaFuncionario?.fase">Fase: {{ vistaFuncionario?.fase }}</p>
     </div>
   </div>
 
   <div *ngIf="error" class="alert alert-error">
     <span>{{ error }}</span>
-    <button class="btn-close-alert" (click)="error = null">×</button>
+    <button class="btn-close-alert" (click)="error = null">x</button>
   </div>
 
   <div *ngIf="cargando" class="loading-state">
@@ -19,202 +19,263 @@
     <p>Cargando tarea...</p>
   </div>
 
-  <div class="form-container" *ngIf="!cargando">
-    <div class="form-meta" *ngIf="formulario">
-      <span class="form-name">{{ formulario.nombre }}</span>
-    </div>
-    <p class="text-muted" *ngIf="!formulario && !cargandoFormulario">
-      Este nodo no tiene formulario. Indica la decisión manualmente.
-    </p>
+  <ng-container *ngIf="!cargando && vistaFuncionario">
 
-    <div *ngIf="cargandoFormulario" class="loading-inline">Cargando formulario...</div>
+    <!-- SECCION 1: Informacion del cliente (solo lectura) -->
+    <div class="seccion-card seccion-cliente">
+      <div class="seccion-header">
+        <h2 class="seccion-titulo">Informacion del cliente</h2>
+        <span class="seccion-badge badge-cliente">Solo lectura</span>
+      </div>
 
-    <ng-container *ngIf="formulario && !cargandoFormulario">
-      <div class="form-group" *ngFor="let campo of formulario.campos">
+      <div *ngIf="vistaFuncionario.camposCliente.length === 0" class="empty-seccion">
+        El cliente no ha completado ningun campo todavia.
+      </div>
 
-        <!-- ── ETIQUETA: solo texto descriptivo ─────────────────────── -->
-        <div *ngIf="campo.tipo === 'ETIQUETA'" class="campo-etiqueta">
-          <p>{{ campo.etiqueta }}</p>
+      <div class="campos-lista" *ngIf="vistaFuncionario.camposCliente.length > 0">
+        <div class="campo-vista" *ngFor="let item of vistaFuncionario.camposCliente">
+          <span class="campo-etiqueta-label">{{ item.campo.etiqueta }}</span>
+
+          <!-- TABLA_GRID -->
+          <div *ngIf="item.campo.tipo === 'TABLA_GRID'" class="campo-valor">
+            <app-tabla-grid-viewer [datos]="item.valor"></app-tabla-grid-viewer>
+          </div>
+
+          <!-- CHECKBOX: lista de seleccionados -->
+          <div *ngIf="item.campo.tipo === 'CHECKBOX'" class="campo-valor chips-list">
+            <span class="chip-valor" *ngFor="let v of (item.valor || [])">{{ v }}</span>
+            <span *ngIf="!item.valor || item.valor.length === 0" class="valor-vacio">Sin seleccion</span>
+          </div>
+
+          <!-- ARCHIVO -->
+          <div *ngIf="item.campo.tipo === 'ARCHIVO'" class="campo-valor">
+            <a *ngIf="item.valor" [href]="item.valor" target="_blank" class="link-archivo">
+              Ver archivo adjunto
+            </a>
+            <span *ngIf="!item.valor" class="valor-vacio">Sin archivo</span>
+          </div>
+
+          <!-- IMAGEN -->
+          <div *ngIf="item.campo.tipo === 'IMAGEN'" class="campo-valor">
+            <img *ngIf="item.valor" [src]="item.valor" class="img-preview-cliente"
+                 (error)="onImgError($event)" alt="Imagen del cliente" />
+            <a *ngIf="item.valor" [href]="item.valor" target="_blank" class="link-archivo">
+              Ver imagen
+            </a>
+            <span *ngIf="!item.valor" class="valor-vacio">Sin imagen</span>
+          </div>
+
+          <!-- ETIQUETA -->
+          <div *ngIf="item.campo.tipo === 'ETIQUETA'" class="campo-valor etiqueta-info">
+            {{ item.campo.etiqueta }}
+          </div>
+
+          <!-- Resto de tipos -->
+          <span class="campo-valor"
+                *ngIf="item.campo.tipo !== 'TABLA_GRID' && item.campo.tipo !== 'CHECKBOX' && item.campo.tipo !== 'ARCHIVO' && item.campo.tipo !== 'IMAGEN' && item.campo.tipo !== 'ETIQUETA'">
+            {{ getValorTexto(item.valor) || '—' }}
+          </span>
         </div>
+      </div>
+    </div>
 
-        <!-- ── Resto de tipos: mostrar label ─────────────────────────── -->
-        <ng-container *ngIf="campo.tipo !== 'ETIQUETA'">
-          <div class="campo-label-row">
+    <!-- SECCION 2: Evaluacion del funcionario (editable) -->
+    <div class="seccion-card seccion-funcionario">
+      <div class="seccion-header">
+        <h2 class="seccion-titulo">Tu evaluacion</h2>
+        <span class="seccion-badge badge-funcionario">Editable</span>
+      </div>
+
+      <div *ngIf="vistaFuncionario.camposFuncionario.length === 0" class="empty-seccion">
+        No hay campos asignados a tu rol en este nodo.
+      </div>
+
+      <form [formGroup]="formFuncionario" *ngIf="vistaFuncionario.camposFuncionario.length > 0">
+        <div class="form-group" *ngFor="let campo of vistaFuncionario.camposFuncionario">
+
+          <!-- ETIQUETA: texto informativo -->
+          <div *ngIf="campo.tipo === 'ETIQUETA'" class="campo-etiqueta-bloque">
+            <p>{{ campo.etiqueta }}</p>
+          </div>
+
+          <ng-container *ngIf="campo.tipo !== 'ETIQUETA'">
             <label class="form-label">
               {{ campo.etiqueta }}
               <span *ngIf="campo.requerido" class="required-mark">*</span>
             </label>
-            <!-- Botón Sugerir IA — solo en TEXTO y TEXTAREA -->
-            <button
-              *ngIf="campo.tipo === 'TEXTO' || campo.tipo === 'TEXTAREA'"
-              class="btn-sugerir"
-              type="button"
-              [disabled]="sugeriendo[campo.nombre]"
-              (click)="sugerirCampo(campo)"
-              title="Sugerir con IA">
-              {{ sugeriendo[campo.nombre] ? '...' : '✦ Sugerir' }}
-            </button>
-          </div>
 
-          <!-- TEXTO ─────────────────────────────────────────────────── -->
-          <input
-            *ngIf="campo.tipo === 'TEXTO'"
-            type="text"
-            class="form-input"
-            [(ngModel)]="respuesta[campo.nombre]"
-            [required]="campo.requerido"
-          />
+            <!-- TEXTO_CORTO -->
+            <input
+              *ngIf="campo.tipo === 'TEXTO_CORTO'"
+              type="text"
+              class="form-input"
+              [formControlName]="campo.nombre"
+              [class.input-error]="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
+            />
 
-          <!-- TEXTAREA ─────────────────────────────────────────────── -->
-          <textarea
-            *ngIf="campo.tipo === 'TEXTAREA'"
-            class="form-input"
-            [(ngModel)]="respuesta[campo.nombre]"
-            [rows]="campo.filas || 3"
-            [required]="campo.requerido"
-          ></textarea>
+            <!-- AREA_TEXTO -->
+            <textarea
+              *ngIf="campo.tipo === 'AREA_TEXTO'"
+              class="form-input"
+              [formControlName]="campo.nombre"
+              rows="3"
+              [class.input-error]="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
+            ></textarea>
 
-          <!-- NUMERO ──────────────────────────────────────────────── -->
-          <input
-            *ngIf="campo.tipo === 'NUMERO'"
-            type="number"
-            class="form-input"
-            [(ngModel)]="respuesta[campo.nombre]"
-            [required]="campo.requerido"
-          />
+            <!-- NUMERO -->
+            <input
+              *ngIf="campo.tipo === 'NUMERO'"
+              type="number"
+              class="form-input"
+              [formControlName]="campo.nombre"
+              [class.input-error]="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
+            />
 
-          <!-- FECHA ─────────────────────────────────────────────────── -->
-          <input
-            *ngIf="campo.tipo === 'FECHA'"
-            type="date"
-            class="form-input"
-            [(ngModel)]="respuesta[campo.nombre]"
-            [required]="campo.requerido"
-          />
+            <!-- FECHA -->
+            <input
+              *ngIf="campo.tipo === 'FECHA'"
+              type="date"
+              class="form-input"
+              [formControlName]="campo.nombre"
+              [class.input-error]="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
+            />
 
-          <!-- SELECCION ─────────────────────────────────────────────── -->
-          <select
-            *ngIf="campo.tipo === 'SELECCION'"
-            class="form-input"
-            [(ngModel)]="respuesta[campo.nombre]"
-          >
-            <option value="">Selecciona una opción</option>
-            <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
-          </select>
-
-          <!-- RADIO ─────────────────────────────────────────────────── -->
-          <div *ngIf="campo.tipo === 'RADIO'" class="radio-group">
-            <label
-              *ngFor="let opcion of campo.opciones"
-              class="radio-label"
-              [class.radio-selected]="respuesta[campo.nombre] === opcion"
+            <!-- SELECTOR -->
+            <select
+              *ngIf="campo.tipo === 'SELECTOR'"
+              class="form-input"
+              [formControlName]="campo.nombre"
+              [class.input-error]="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
             >
-              <input
-                type="radio"
-                [name]="campo.nombre"
-                [value]="opcion"
-                [(ngModel)]="respuesta[campo.nombre]"
-              />
-              {{ opcion }}
-            </label>
-          </div>
+              <option value="">Selecciona una opcion</option>
+              <option *ngFor="let opcion of campo.opciones" [value]="opcion">{{ opcion }}</option>
+            </select>
 
-          <!-- CHECKBOX ──────────────────────────────────────────────── -->
-          <div *ngIf="campo.tipo === 'CHECKBOX'" class="checkbox-group">
-            <label
-              *ngFor="let opcion of campo.opciones"
-              class="checkbox-label"
-              [class.checkbox-selected]="isChecked(campo.nombre, opcion)"
+            <!-- RADIO -->
+            <div *ngIf="campo.tipo === 'RADIO'" class="radio-group">
+              <label
+                *ngFor="let opcion of campo.opciones"
+                class="radio-label"
+                [class.radio-selected]="formFuncionario.get(campo.nombre)?.value === opcion"
+              >
+                <input
+                  type="radio"
+                  [name]="campo.nombre"
+                  [value]="opcion"
+                  [formControlName]="campo.nombre"
+                />
+                {{ opcion }}
+              </label>
+            </div>
+
+            <!-- CHECKBOX -->
+            <div *ngIf="campo.tipo === 'CHECKBOX'" class="checkbox-group">
+              <label
+                *ngFor="let opcion of campo.opciones"
+                class="checkbox-label"
+                [class.checkbox-selected]="isChecked(campo.nombre, opcion)"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isChecked(campo.nombre, opcion)"
+                  (change)="toggleCheckbox(campo.nombre, opcion, $any($event.target).checked)"
+                />
+                {{ opcion }}
+              </label>
+            </div>
+
+            <!-- ARCHIVO / IMAGEN -->
+            <div
+              *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'"
+              class="upload-area"
+              (click)="fileInputFuncionario.click()"
             >
-              <input
-                type="checkbox"
-                [checked]="isChecked(campo.nombre, opcion)"
-                (change)="toggleCheckbox(campo.nombre, opcion)"
+              <ng-container *ngIf="!previewMap[campo.nombre] && !isUploadingMap[campo.nombre]">
+                <span class="upload-icon">
+                  Seleccionar {{ campo.tipo === 'IMAGEN' ? 'imagen' : 'archivo' }}
+                </span>
+                <small>{{ campo.tipo === 'IMAGEN' ? 'Imagenes (max. 10MB)' : 'Cualquier archivo (max. 10MB)' }}</small>
+              </ng-container>
+              <img
+                *ngIf="previewMap[campo.nombre] && campo.tipo === 'IMAGEN'"
+                [src]="previewMap[campo.nombre]"
+                style="max-height: 150px; border-radius: 4px;"
+                (error)="onImgError($event)"
+                alt="Preview"
               />
-              {{ opcion }}
-            </label>
-          </div>
+              <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
+                Archivo listo: {{ previewMap[campo.nombre] }}
+              </span>
+              <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
+              <input
+                #fileInputFuncionario
+                type="file"
+                [accept]="campo.tipo === 'IMAGEN' ? 'image/*' : '*/*'"
+                style="display: none"
+                (change)="subirArchivoFuncionario($event, campo.nombre)"
+              />
+            </div>
 
-          <!-- ARCHIVO / IMAGEN ─────────────────────────────────────── -->
-          <div *ngIf="campo.tipo === 'ARCHIVO' || campo.tipo === 'IMAGEN'" class="upload-area" (click)="fileInput.click()">
-            <ng-container *ngIf="!previewMap[campo.nombre] && !isUploadingMap[campo.nombre]">
-              <span class="upload-icon">Seleccionar {{ campo.tipo === 'IMAGEN' ? 'imagen' : 'archivo' }}</span>
-              <small>{{ campo.tipo === 'IMAGEN' ? 'Imágenes (max. 10MB)' : 'Cualquier archivo (max. 10MB)' }}</small>
-            </ng-container>
-            <img *ngIf="previewMap[campo.nombre] && campo.tipo === 'IMAGEN'"
-                 [src]="previewMap[campo.nombre]"
-                 style="max-height: 150px; border-radius: 4px;" />
-            <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
-              Archivo listo: {{ previewMap[campo.nombre] }}
-            </span>
-            <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
-            <input #fileInput type="file"
-                   [accept]="campo.tipo === 'IMAGEN' ? 'image/*' : '*/*'"
-                   style="display: none"
-                   (change)="subirArchivo($event, campo.nombre)" />
-          </div>
+            <!-- TABLA_GRID (editable) -->
+            <div *ngIf="campo.tipo === 'TABLA_GRID'" class="grid-container">
+              <table class="grid-table">
+                <thead>
+                  <tr>
+                    <th *ngFor="let col of (campo.columnasGrid || [])">{{ col }}</th>
+                    <th class="col-acciones"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let fila of gridRows[campo.nombre]; let ri = index">
+                    <td *ngFor="let col of (campo.columnasGrid || [])">
+                      <input
+                        class="grid-input"
+                        type="text"
+                        [(ngModel)]="fila[col]"
+                        [ngModelOptions]="{standalone: true}"
+                        (ngModelChange)="sincronizarGrid(campo.nombre)"
+                      />
+                    </td>
+                    <td class="col-acciones">
+                      <button
+                        type="button"
+                        class="btn-grid-remove"
+                        (click)="quitarFilaGrid(campo.nombre, ri)"
+                        [disabled]="(gridRows[campo.nombre]?.length || 0) <= 1"
+                      >x</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button
+                type="button"
+                class="btn btn-secondary mini"
+                (click)="agregarFilaGrid(campo.nombre, campo.columnasGrid || [])"
+              >
+                + Agregar fila
+              </button>
+            </div>
 
-          <!-- GRID / TABLA ─────────────────────────────────────────── -->
-          <div *ngIf="campo.tipo === 'GRID'" class="grid-container">
-            <table class="grid-table">
-              <thead>
-                <tr>
-                  <th *ngFor="let col of (campo.columnas || [])">{{ col }}</th>
-                  <th class="col-acciones"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let fila of gridRows[campo.nombre]; let ri = index">
-                  <td *ngFor="let col of (campo.columnas || [])">
-                    <input
-                      class="grid-input"
-                      type="text"
-                      [(ngModel)]="fila[col]"
-                      (ngModelChange)="sincronizarGrid(campo.nombre)"
-                    />
-                  </td>
-                  <td class="col-acciones">
-                    <button type="button" class="btn-grid-remove"
-                            (click)="quitarFilaGrid(campo.nombre, ri)"
-                            [disabled]="(gridRows[campo.nombre]?.length || 0) <= 1">×</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <button type="button" class="btn btn-secondary mini"
-                    (click)="agregarFilaGrid(campo.nombre, campo.columnas || [])">
-              + Agregar fila
-            </button>
-          </div>
+            <small
+              class="field-error"
+              *ngIf="formFuncionario.get(campo.nombre)?.invalid && formFuncionario.get(campo.nombre)?.touched"
+            >
+              Este campo es requerido
+            </small>
+          </ng-container>
+        </div>
+      </form>
 
-        </ng-container>
+      <!-- Acciones -->
+      <div class="actions">
+        <button class="btn btn-primary" (click)="aprobar()" [disabled]="guardando">
+          {{ guardando ? 'Guardando...' : 'Aprobar y continuar' }}
+        </button>
+        <button class="btn btn-danger" (click)="rechazar()" [disabled]="guardando">
+          Rechazar
+        </button>
       </div>
-    </ng-container>
-
-    <!-- Decisión manual (sin formulario) -->
-    <div class="form-group" *ngIf="!formulario && !cargandoFormulario">
-      <label class="form-label">Decisión</label>
-      <input
-        type="text"
-        class="form-input"
-        [(ngModel)]="decisionManual"
-        placeholder="Ej. Aprobado / Rechazado"
-      />
     </div>
 
-    <!-- Observaciones -->
-    <div class="form-group">
-      <label class="form-label">Observaciones <small class="text-muted">(requerido solo para rechazar)</small></label>
-      <textarea class="form-input" [(ngModel)]="observaciones" rows="3"></textarea>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-primary" (click)="completar()" [disabled]="guardando">
-        {{ guardando ? 'Guardando...' : 'Completar tarea' }}
-      </button>
-      <button class="btn btn-danger" (click)="rechazar()" [disabled]="guardando">
-        Rechazar tarea
-      </button>
-    </div>
-  </div>
+  </ng-container>
 </div>

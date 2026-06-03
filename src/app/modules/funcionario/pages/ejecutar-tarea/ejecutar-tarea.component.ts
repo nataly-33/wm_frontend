@@ -1,49 +1,46 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs';
-import { EjecucionService, EjecucionNodo } from '../../../../core/services/ejecucion.service';
-import { Formulario, FormularioCampo, FormularioService } from '../../../../core/services/formulario.service';
+import {
+  EjecucionService,
+  VistaFuncionarioResponse,
+  CampoFormulario
+} from '../../../../core/services/ejecucion.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NavbarComponent } from '../../../../shared/components/navbar/navbar.component';
+import { TablaGridViewerComponent } from '../../../../shared/components/tabla-grid-viewer/tabla-grid-viewer.component';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-ejecutar-tarea',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, NavbarComponent],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NavbarComponent, TablaGridViewerComponent],
   templateUrl: './ejecutar-tarea.component.html',
   styleUrls: ['./ejecutar-tarea.component.scss']
 })
 export class EjecutarTareaComponent implements OnInit {
-  tareaId: string | null = null;
-  tarea: EjecucionNodo | null = null;
-  formulario: Formulario | null = null;
-  respuesta: Record<string, any> = {};
-  decisionManual = '';
-  observaciones = '';
+  ejecucionId: string | null = null;
+  vistaFuncionario: VistaFuncionarioResponse | null = null;
+  formFuncionario: FormGroup = new FormGroup({});
+
   cargando = false;
-  cargandoFormulario = false;
   guardando = false;
   error: string | null = null;
   userName = '';
 
-  isUploadingMap: Record<string, boolean> = {};
+  archivosSubidos: Record<string, boolean> = {};
   previewMap: Record<string, string> = {};
-  // Para GRID: filas de datos, indexadas por nombre del campo
+  isUploadingMap: Record<string, boolean> = {};
+
   gridRows: Record<string, Array<Record<string, string>>> = {};
-  // Para CHECKBOX: las opciones seleccionadas como Set
-  checkboxSets: Record<string, Set<string>> = {};
-  // Estado de sugerencia IA por campo
-  sugeriendo: Record<string, boolean> = {};
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private ejecucionService: EjecucionService,
-    private formularioService: FormularioService,
     private authService: AuthService,
     private http: HttpClient
   ) {}
@@ -51,167 +48,69 @@ export class EjecutarTareaComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
     if (user) this.userName = user.nombre;
-    this.tareaId = this.route.snapshot.paramMap.get('id');
-    if (this.tareaId) {
-      this.cargarTarea(this.tareaId);
+    this.ejecucionId = this.route.snapshot.paramMap.get('id');
+    if (this.ejecucionId) {
+      this.cargarVista(this.ejecucionId);
     }
   }
 
-  cargarTarea(id: string): void {
+  cargarVista(id: string): void {
     this.cargando = true;
-    this.ejecucionService.obtener(id).pipe(
+    this.ejecucionService.obtenerVistaFuncionario(id).pipe(
       timeout(15000),
       finalize(() => this.cargando = false)
     ).subscribe({
-      next: (res) => {
-        this.tarea = res.data ?? null;
-        if (!this.tarea) {
-          this.error = 'No se encontró la tarea';
-          return;
-        }
-        this.ejecucionService.iniciar(id).subscribe();
-        this.cargarFormulario(this.tarea.nodoId);
+      next: (vista) => {
+        this.vistaFuncionario = vista;
+        this.construirFormFuncionario(vista.camposFuncionario);
       },
       error: (err) => {
-        this.error = err?.error?.message ?? 'No se pudo cargar la tarea';
+        this.error = err?.error?.message ?? 'No se pudo cargar la vista del funcionario';
       }
     });
   }
 
-  cargarFormulario(nodoId: string): void {
-    this.cargandoFormulario = true;
-    this.formularioService.obtenerPorNodo(nodoId).pipe(
-      timeout(15000),
-      finalize(() => this.cargandoFormulario = false)
-    ).subscribe({
-      next: (res) => {
-        this.formulario = res.data ?? null;
-        this.inicializarRespuestas(this.formulario?.campos ?? []);
-      },
-      error: () => {
-        this.formulario = null;
-        this.respuesta = {};
-      }
-    });
-  }
-
-  private inicializarRespuestas(campos: FormularioCampo[]): void {
-    this.respuesta = {};
+  construirFormFuncionario(campos: CampoFormulario[]): void {
+    const controls: Record<string, FormControl> = {};
     this.gridRows = {};
-    this.checkboxSets = {};
     campos.forEach((campo) => {
-      switch (campo.tipo) {
-        case 'CHECKBOX':
-          this.checkboxSets[campo.nombre] = new Set<string>();
-          this.respuesta[campo.nombre] = [];
-          break;
-        case 'GRID': {
-          const cols = campo.columnas ?? [];
-          this.gridRows[campo.nombre] = [];
-          if (cols.length > 0) {
-            this.agregarFilaGrid(campo.nombre, cols);
-          }
-          this.respuesta[campo.nombre] = [];
-          break;
+      const validators = campo.requerido ? [Validators.required] : [];
+      if (campo.tipo === 'CHECKBOX') {
+        controls[campo.nombre] = new FormControl([], validators);
+      } else if (campo.tipo === 'TABLA_GRID') {
+        const cols = campo.columnasGrid ?? [];
+        this.gridRows[campo.nombre] = [];
+        if (cols.length > 0) {
+          this.agregarFilaGrid(campo.nombre, cols);
         }
-        case 'ETIQUETA':
-          // No se guarda valor
-          break;
-        default:
-          this.respuesta[campo.nombre] = '';
+        controls[campo.nombre] = new FormControl([], validators);
+      } else if (campo.tipo === 'ETIQUETA') {
+        // No se agrega control para etiquetas
+      } else {
+        controls[campo.nombre] = new FormControl('', validators);
       }
     });
+    this.formFuncionario = new FormGroup(controls);
   }
 
-  // ─── GRID helpers ────────────────────────────────────────────────
-  agregarFilaGrid(nombreCampo: string, columnas: string[]): void {
-    if (!this.gridRows[nombreCampo]) this.gridRows[nombreCampo] = [];
-    const filaVacia: Record<string, string> = {};
-    columnas.forEach(col => filaVacia[col] = '');
-    this.gridRows[nombreCampo].push(filaVacia);
-  }
-
-  quitarFilaGrid(nombreCampo: string, index: number): void {
-    this.gridRows[nombreCampo]?.splice(index, 1);
-    this.sincronizarGrid(nombreCampo);
-  }
-
-  sincronizarGrid(nombreCampo: string): void {
-    this.respuesta[nombreCampo] = [...(this.gridRows[nombreCampo] ?? [])];
-  }
-
-  // ─── CHECKBOX helpers ─────────────────────────────────────────────
-  toggleCheckbox(nombreCampo: string, opcion: string): void {
-    const set = this.checkboxSets[nombreCampo] ?? new Set<string>();
-    if (set.has(opcion)) {
-      set.delete(opcion);
+  toggleCheckbox(nombreCampo: string, opcion: string, checked: boolean): void {
+    const control = this.formFuncionario.get(nombreCampo);
+    if (!control) return;
+    const current: string[] = control.value ?? [];
+    if (checked) {
+      control.setValue([...current, opcion]);
     } else {
-      set.add(opcion);
+      control.setValue(current.filter((v) => v !== opcion));
     }
-    this.checkboxSets[nombreCampo] = set;
-    this.respuesta[nombreCampo] = Array.from(set);
+    control.markAsDirty();
   }
 
   isChecked(nombreCampo: string, opcion: string): boolean {
-    return this.checkboxSets[nombreCampo]?.has(opcion) ?? false;
+    const val: string[] = this.formFuncionario.get(nombreCampo)?.value ?? [];
+    return val.includes(opcion);
   }
 
-  // ─── Sugerir con IA ──────────────────────────────────────────────
-  sugerirCampo(campo: FormularioCampo): void {
-    this.sugeriendo[campo.nombre] = true;
-    this.http.post<{ sugerencia: string }>(
-      `${environment.apiUrl}/api/v1/ia/sugerir-campo`,
-      {
-        nombre_campo: campo.nombre,
-        tipo_nodo: this.tarea?.nombreNodo ?? '',
-        nombre_politica: this.tarea?.nombrePolitica ?? '',
-        contexto: this.respuesta[campo.nombre] ?? ''
-      }
-    ).pipe(finalize(() => this.sugeriendo[campo.nombre] = false))
-    .subscribe({
-      next: (r) => {
-        if (r.sugerencia) {
-          this.respuesta[campo.nombre] = r.sugerencia;
-        }
-      },
-      error: () => {} // silencioso
-    });
-  }
-
-  // ─── Completar / Rechazar ─────────────────────────────────────────
-  completar(): void {
-    if (!this.tareaId) return;
-    const payload = { ...this.respuesta };
-    if (!this.formulario && this.decisionManual.trim()) {
-      payload['decision'] = this.decisionManual.trim();
-    }
-    this.guardando = true;
-    this.ejecucionService.completar(this.tareaId, payload).subscribe({
-      next: () => { this.router.navigate(['/funcionario/tareas']); },
-      error: () => {
-        this.error = 'Error al completar';
-        this.guardando = false;
-      }
-    });
-  }
-
-  rechazar(): void {
-    if (!this.tareaId) return;
-    if (!this.observaciones) {
-      this.error = 'Debes proveer observaciones para rechazar';
-      return;
-    }
-    this.guardando = true;
-    this.ejecucionService.rechazar(this.tareaId, this.observaciones).subscribe({
-      next: () => { this.router.navigate(['/funcionario/tareas']); },
-      error: () => {
-        this.error = 'Error al rechazar';
-        this.guardando = false;
-      }
-    });
-  }
-
-  subirArchivo(event: Event, nombreCampo: string): void {
+  subirArchivoFuncionario(event: Event, nombreCampo: string): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const archivo = input.files[0];
@@ -224,16 +123,79 @@ export class EjecutarTareaComponent implements OnInit {
       formData
     ).subscribe({
       next: (response) => {
-        this.respuesta[nombreCampo] = response.url;
+        this.formFuncionario.get(nombreCampo)?.setValue(response.url);
         this.isUploadingMap[nombreCampo] = false;
+        this.archivosSubidos[nombreCampo] = true;
         this.previewMap[nombreCampo] = archivo.type.startsWith('image/')
           ? URL.createObjectURL(archivo)
           : archivo.name;
       },
       error: () => {
         this.isUploadingMap[nombreCampo] = false;
-        this.error = 'Error al subir el archivo. Verifica el tamaño (max. 10MB).';
+        this.error = 'Error al subir el archivo. Verifica el tamano (max. 10MB).';
       }
     });
+  }
+
+  agregarFilaGrid(nombreCampo: string, columnas: string[]): void {
+    if (!this.gridRows[nombreCampo]) this.gridRows[nombreCampo] = [];
+    const filaVacia: Record<string, string> = {};
+    columnas.forEach((col) => (filaVacia[col] = ''));
+    this.gridRows[nombreCampo].push(filaVacia);
+    this.sincronizarGrid(nombreCampo);
+  }
+
+  quitarFilaGrid(nombreCampo: string, index: number): void {
+    this.gridRows[nombreCampo]?.splice(index, 1);
+    this.sincronizarGrid(nombreCampo);
+  }
+
+  sincronizarGrid(nombreCampo: string): void {
+    this.formFuncionario.get(nombreCampo)?.setValue([...(this.gridRows[nombreCampo] ?? [])]);
+  }
+
+  aprobar(): void {
+    if (!this.ejecucionId) return;
+    if (this.formFuncionario.invalid) {
+      this.formFuncionario.markAllAsTouched();
+      this.error = 'Completa los campos requeridos antes de aprobar';
+      return;
+    }
+    this.guardando = true;
+    this.ejecucionService.funcionarioCompletar(this.ejecucionId, this.formFuncionario.value).subscribe({
+      next: () => { this.router.navigate(['/funcionario/tareas']); },
+      error: (err) => {
+        this.error = err?.error?.message ?? 'Error al aprobar la tarea';
+        this.guardando = false;
+      }
+    });
+  }
+
+  rechazar(): void {
+    if (!this.ejecucionId) return;
+    if (!confirm('¿Seguro que deseas rechazar esta tarea? Esta accion no se puede deshacer.')) return;
+    this.guardando = true;
+    const campoPrioridad = this.vistaFuncionario?.camposFuncionario.find((c) => c.esCampoPrioridad);
+    const respuestas = campoPrioridad
+      ? { ...this.formFuncionario.value, [campoPrioridad.nombre]: 'Rechazado' }
+      : { resultado: 'Rechazado' };
+    this.ejecucionService.funcionarioCompletar(this.ejecucionId, respuestas).subscribe({
+      next: () => { this.router.navigate(['/funcionario/tareas']); },
+      error: (err) => {
+        this.error = err?.error?.message ?? 'Error al rechazar la tarea';
+        this.guardando = false;
+      }
+    });
+  }
+
+  onImgError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) img.style.display = 'none';
+  }
+
+  getValorTexto(valor: any): string {
+    if (Array.isArray(valor)) return valor.join(', ');
+    if (valor === null || valor === undefined) return '';
+    return String(valor);
   }
 }
