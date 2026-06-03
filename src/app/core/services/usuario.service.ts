@@ -34,6 +34,10 @@ export class UsuarioService {
     return this.http.get<ApiResponse<Usuario[]>>(this.baseUrl);
   }
 
+  listarPorRol(rol: string): Observable<ApiResponse<Usuario[]>> {
+    return this.http.get<ApiResponse<Usuario[]>>(`${this.baseUrl}?rol=${rol}`);
+  }
+
   obtener(id: string): Observable<ApiResponse<Usuario>> {
     return this.http.get<ApiResponse<Usuario>>(`${this.baseUrl}/${id}`);
   }

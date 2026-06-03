@@ -4,6 +4,29 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 
+export interface CampoFormulario {
+  nombre: string;
+  etiqueta: string;
+  tipo: string;
+  requerido: boolean;
+  esCampoPrioridad: boolean;
+  opciones: string[];
+  columnasGrid?: string[];
+  llenadoPor: string;
+}
+
+export interface CampoConValor {
+  campo: CampoFormulario;
+  valor: any;
+}
+
+export interface VistaFuncionarioResponse {
+  ejecucionId: string;
+  fase: string;
+  camposCliente: CampoConValor[];
+  camposFuncionario: CampoFormulario[];
+}
+
 export interface EjecucionNodo {
   id: string;
   tramiteId: string;
@@ -22,6 +45,30 @@ export interface EjecucionNodo {
   prioridad?: string;
   nombreNodo?: string;
   nombrePolitica?: string;
+}
+
+export interface CampoRellenado {
+  nombre: string;
+  etiqueta: string;
+  tipo: string;
+  valor: any;
+  esArchivo: boolean;
+  esTablaGrid: boolean;
+}
+
+export interface NodoHistorial {
+  ejecucionId: string;
+  nodoId: string;
+  nodoNombre: string;
+  departamento: string;
+  fase: string;
+  estado: string;
+  camposCliente: CampoRellenado[];
+  camposFuncionario: CampoRellenado[];
+  funcionarioNombre: string;
+  clienteCompletadoEn: string;
+  funcionarioCompletadoEn: string;
+  creadoEn: string;
 }
 
 export interface EjecucionDetallada {
@@ -77,5 +124,19 @@ export class EjecucionService {
 
   reasignar(id: string, funcionarioId: string): Observable<ApiResponse<EjecucionNodo>> {
     return this.http.put<ApiResponse<EjecucionNodo>>(`${this.apiUrl}/${id}/reasignar`, { funcionarioId });
+  }
+
+  obtenerVistaFuncionario(ejecucionId: string): Observable<VistaFuncionarioResponse> {
+    return this.http.get<VistaFuncionarioResponse>(`${this.apiUrl}/${ejecucionId}/vista-funcionario`);
+  }
+
+  funcionarioCompletar(ejecucionId: string, respuestas: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${ejecucionId}/funcionario-completar`, respuestas);
+  }
+
+  historialFormularios(tramiteId: string): Observable<NodoHistorial[]> {
+    return this.http.get<NodoHistorial[]>(
+      `${environment.apiUrl}/api/v1/tramites/${tramiteId}/historial-formularios`
+    );
   }
 }

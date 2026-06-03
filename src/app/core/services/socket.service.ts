@@ -208,6 +208,14 @@ export class SocketService {
     this.diagramaSubscriptions.delete(`/topic/diagrama/${politicaId}`);
   }
 
+  publicarEventoDiagrama(politicaId: string, evento: object): void {
+    if (!this.client || !this.client.connected) return;
+    this.client.publish({
+      destination: `/app/diagrama/${politicaId}/evento`,
+      body: JSON.stringify(evento)
+    });
+  }
+
   suscribirAFormulariosDepartamento(departamentoId: string): Observable<any> {
     this.ensureConectado();
 
