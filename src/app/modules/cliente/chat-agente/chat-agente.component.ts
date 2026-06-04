@@ -17,6 +17,13 @@ interface MensajeUI {
   timestamp: Date;
 }
 
+interface CampoMeta {
+  tipo: string;
+  etiqueta: string;
+  opciones: string[];
+  requerido: boolean;
+}
+
 @Component({
   selector: 'app-chat-agente',
   standalone: true,
@@ -37,6 +44,11 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
   estadoBadge: string | null = null;
   clienteId: string = '';
 
+  // Estado de campo activo para widgets interactivos
+  campoActivo: CampoMeta | null = null;
+  seleccionCheckboxArray: string[] = [];
+  fechaSeleccionada = '';
+
   private recognition: any = null;
   private subcripciones: Subscription[] = [];
   private autoScroll = true;
@@ -52,13 +64,47 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
     const user = this.authService.getCurrentUser();
     this.clienteId = user?.id ?? 'anonimo';
 
-    this.agregarMensajeAgente(
-      'Hola! Soy el asistente de CRE. Puedo ayudarte a iniciar un tramite o consultar el estado de uno existente. Que necesitas hoy?',
-      'texto'
-    );
-
     this.iniciarVozReconocimiento();
     this.suscribirNotificaciones();
+
+    // Intentar restaurar conversacion activa existente
+    this.agenteService.obtenerConversacionActiva(this.clienteId).subscribe({
+      next: (resultado) => {
+        if (resultado.tieneConversacionActiva && resultado.conversacionId) {
+          this.conversacionId = resultado.conversacionId;
+          this.estadoConversacion = resultado.estadoConversacion ?? 'DETECTANDO_POLITICA';
+
+          if (resultado.mensajes && resultado.mensajes.length > 0) {
+            this.mensajes = resultado.mensajes.map((m: any) => ({
+              rol: m.rol as 'agente' | 'cliente',
+              contenido: m.contenido ?? '',
+              tipo: m.tipo ?? 'texto',
+              timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+            }));
+            this.agregarMensajeAgente(
+              'Bienvenido de vuelta. Retomamos donde lo dejaste.',
+              'texto'
+            );
+          } else {
+            this.agregarMensajeAgente(
+              'Hola! Soy el asistente de CRE. Puedo ayudarte a iniciar un tramite o consultar el estado de uno existente. Que necesitas hoy?',
+              'texto'
+            );
+          }
+        } else {
+          this.agregarMensajeAgente(
+            'Hola! Soy el asistente de CRE. Puedo ayudarte a iniciar un tramite o consultar el estado de uno existente. Que necesitas hoy?',
+            'texto'
+          );
+        }
+      },
+      error: () => {
+        this.agregarMensajeAgente(
+          'Hola! Soy el asistente de CRE. Puedo ayudarte a iniciar un tramite o consultar el estado de uno existente. Que necesitas hoy?',
+          'texto'
+        );
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -96,6 +142,90 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.enviar();
   }
 
+  // ─── Widgets interactivos ─────────────────────────────────────────────────
+
+  confirmarPolitica(valor: boolean): void {
+    this.enviarConfirmacion(valor ? 'si' : 'no');
+    this.campoActivo = null;
+  }
+
+  seleccionarOpcion(opcion: string): void {
+    if (this.procesando) return;
+    this.agregarMensajeCliente(opcion, 'texto');
+    this.procesando = true;
+    this.campoActivo = null;
+    this.agenteService.enviarMensaje(this.conversacionId, this.clienteId, opcion, 'texto')
+      .subscribe({
+        next: r => this.manejarRespuesta(r),
+        error: () => { this.procesando = false; }
+      });
+  }
+
+  toggleCheckbox(opcion: string): void {
+    const idx = this.seleccionCheckboxArray.indexOf(opcion);
+    if (idx >= 0) {
+      this.seleccionCheckboxArray.splice(idx, 1);
+    } else {
+      this.seleccionCheckboxArray.push(opcion);
+    }
+  }
+
+  isCheckboxSeleccionado(opcion: string): boolean {
+    return this.seleccionCheckboxArray.indexOf(opcion) >= 0;
+  }
+
+  confirmarCheckboxes(): void {
+    if (this.seleccionCheckboxArray.length === 0) return;
+    const valor = this.seleccionCheckboxArray.join(', ');
+    this.seleccionCheckboxArray = [];
+    this.seleccionarOpcion(valor);
+  }
+
+  enviarFecha(): void {
+    if (!this.fechaSeleccionada) return;
+    const partes = this.fechaSeleccionada.split('-');
+    const fechaFormateada = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : this.fechaSeleccionada;
+    this.fechaSeleccionada = '';
+    this.seleccionarOpcion(fechaFormateada);
+  }
+
+  // ─── Getters para template ────────────────────────────────────────────────
+
+  get esEstadoConfirmacion(): boolean {
+    return this.estadoConversacion === 'CONFIRMANDO_POLITICA';
+  }
+
+  get esCampoFecha(): boolean {
+    return this.campoActivo?.tipo === 'FECHA';
+  }
+
+  get esCampoSelector(): boolean {
+    return ['SELECTOR', 'SELECCION', 'RADIO'].includes(this.campoActivo?.tipo ?? '');
+  }
+
+  get esCampoCheckbox(): boolean {
+    return this.campoActivo?.tipo === 'CHECKBOX';
+  }
+
+  get esCampoArchivo(): boolean {
+    return ['ARCHIVO', 'IMAGEN'].includes(this.campoActivo?.tipo ?? '');
+  }
+
+  get esCampoNumero(): boolean {
+    return this.campoActivo?.tipo === 'NUMERO';
+  }
+
+  get esCampoTexto(): boolean {
+    return !this.esCampoFecha && !this.esCampoSelector && !this.esCampoCheckbox && !this.esCampoArchivo;
+  }
+
+  esUltimoMensajeAgente(msg: MensajeUI): boolean {
+    const ultimoConfirmacion = [...this.mensajes]
+      .reverse()
+      .find(m => m.tipo === 'confirmacion' && m.rol === 'agente');
+    return ultimoConfirmacion === msg;
+  }
+
   // ─── Archivo ──────────────────────────────────────────────────────────────
 
   onArchivoSeleccionado(event: Event): void {
@@ -111,9 +241,9 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
 
     this.procesando = true;
     const formData = new FormData();
-    formData.append('file', this.archivoSeleccionado);
+    formData.append('archivo', this.archivoSeleccionado);
 
-    this.http.post<any>(`${environment.apiUrl}/api/v1/archivos/upload`, formData).subscribe({
+    this.http.post<any>(`${environment.apiUrl}/api/v1/archivos/subir`, formData).subscribe({
       next: (res) => {
         const archivoUrl = res.url ?? res.data?.url ?? '';
         this.agregarMensajeCliente('[Archivo: ' + this.archivoSeleccionado!.name + ']', 'archivo');
@@ -191,9 +321,35 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   private suscribirNotificaciones(): void {
     const sub = this.socketService.getNotificaciones().subscribe((evento) => {
-      if (evento?.tipo === 'SOLICITUD_ENVIADA' || evento?.tipo === 'COMPLETADO' || evento?.tipo === 'RECHAZADO') {
+      if (!evento) return;
+
+      if (evento.tipo === 'MENSAJE_AGENTE' && evento.mensaje) {
+        const tipoMsg = evento.tipoMensaje ?? 'texto';
+        this.agregarMensajeAgente(evento.mensaje, tipoMsg);
+
+        // Actualizar campoActivo si el WS incluye campoMeta
+        if (evento.campoMeta) {
+          this.campoActivo = evento.campoMeta as CampoMeta;
+          this.seleccionCheckboxArray = [];
+        } else if (tipoMsg !== 'DEPARTAMENTO') {
+          // Si no hay campo meta en el evento, limpiar el campo activo
+          this.campoActivo = null;
+        }
+        return;
+      }
+
+      if (evento.tipo === 'SOLICITUD_ENVIADA' || evento.tipo === 'COMPLETADO' || evento.tipo === 'RECHAZADO') {
         this.estadoBadge = evento.tipo;
         this.agregarMensajeAgente(evento.mensaje ?? 'Tu tramite fue actualizado.', 'estado');
+        this.campoActivo = null;
+      }
+
+      if (evento.tipo === 'COMPLETADO') {
+        this.estadoConversacion = 'COMPLETADO';
+        this.estadoBadge = 'COMPLETADO';
+      } else if (evento.tipo === 'RECHAZADO') {
+        this.estadoConversacion = 'RECHAZADO';
+        this.estadoBadge = 'RECHAZADO';
       }
     });
     this.subcripciones.push(sub);
@@ -213,18 +369,27 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
       const tipo = resp.estadoConversacion === 'CONFIRMANDO_POLITICA' ? 'confirmacion' : 'texto';
       this.agregarMensajeAgente(resp.mensajeAgente, tipo);
     }
+
+    // Actualizar campo activo segun la respuesta
+    if (resp.estadoConversacion === 'RECOPILANDO_DATOS_NODO' && resp.campoMeta) {
+      this.campoActivo = resp.campoMeta as CampoMeta;
+      this.seleccionCheckboxArray = [];
+    } else {
+      this.campoActivo = null;
+    }
+
     if (resp.estadoConversacion === 'COMPLETADO' || resp.estadoConversacion === 'RECHAZADO') {
       this.estadoBadge = resp.estadoConversacion;
     }
   }
 
-  private agregarMensajeAgente(contenido: string, tipo: string): void {
-    this.mensajes.push({ rol: 'agente', contenido, tipo, timestamp: new Date() });
+  agregarMensajeCliente(contenido: string, tipo: string): void {
+    this.mensajes.push({ rol: 'cliente', contenido, tipo, timestamp: new Date() });
     this.autoScroll = true;
   }
 
-  private agregarMensajeCliente(contenido: string, tipo: string): void {
-    this.mensajes.push({ rol: 'cliente', contenido, tipo, timestamp: new Date() });
+  private agregarMensajeAgente(contenido: string, tipo: string): void {
+    this.mensajes.push({ rol: 'agente', contenido, tipo, timestamp: new Date() });
     this.autoScroll = true;
   }
 
