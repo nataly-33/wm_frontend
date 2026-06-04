@@ -91,6 +91,11 @@ import { AuthService } from '../../../core/services/auth.service';
         color: var(--success);
         border: 1px solid rgba(107, 217, 104, 0.3);
       }
+      &.role-cliente {
+        background: rgba(147, 51, 234, 0.12);
+        color: #c084fc;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+      }
     }
 
     .navbar-right {
@@ -182,6 +187,7 @@ export class NavbarComponent {
       case 'ADMIN_GENERAL': return 'Admin General';
       case 'ADMIN_DEPARTAMENTO': return 'Admin Depto';
       case 'FUNCIONARIO': return 'Funcionario';
+      case 'CLIENTE': return 'Cliente';
       default: return '';
     }
   }
@@ -192,6 +198,7 @@ export class NavbarComponent {
       case 'ADMIN_GENERAL': return 'role-admin';
       case 'ADMIN_DEPARTAMENTO': return 'role-depto';
       case 'FUNCIONARIO': return 'role-func';
+      case 'CLIENTE': return 'role-cliente';
       default: return '';
     }
   }
