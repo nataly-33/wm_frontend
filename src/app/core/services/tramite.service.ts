@@ -56,6 +56,7 @@ export interface MonitorTramiteEnNodo {
   ejecucionId: string;
   funcionarioNombre: string;
   tiempoTranscurrido: string;
+  fase?: string;
 }
 
 export interface MonitorNodoActivo {

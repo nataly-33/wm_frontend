@@ -102,6 +102,10 @@ export class EjecucionService {
     return this.http.get<ApiResponse<EjecucionDetallada[]>>(`${this.apiUrl}/funcionario/${usuarioId}`);
   }
 
+  listarHistorialPorFuncionario(usuarioId: string): Observable<ApiResponse<EjecucionDetallada[]>> {
+    return this.http.get<ApiResponse<EjecucionDetallada[]>>(`${this.apiUrl}/funcionario/${usuarioId}/historial`);
+  }
+
   listarPorTramite(tramiteId: string): Observable<ApiResponse<EjecucionNodo[]>> {
     return this.http.get<ApiResponse<EjecucionNodo[]>>(`${this.apiUrl}/tramite/${tramiteId}`);
   }

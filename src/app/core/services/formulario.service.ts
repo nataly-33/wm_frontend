@@ -18,6 +18,7 @@ export interface FormularioCampo {
   opciones: string[];
   filas?: number;
   columnas?: string[];
+  llenadoPor?: 'CLIENTE' | 'FUNCIONARIO';
 }
 
 export interface Formulario {

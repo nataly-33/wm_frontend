@@ -16,6 +16,12 @@ export interface RespuestaAgente {
   mensajeAgente: string;
   estado?: string;
   campoActual?: string;
+  campoMeta?: {
+    tipo: string;
+    etiqueta: string;
+    opciones: string[];
+    requerido: boolean;
+  };
   politicaDetectada?: string;
   formularioCompletado?: boolean;
 }
@@ -63,5 +69,15 @@ export class AgenteService {
 
   obtenerEstadoTramite(tramiteId: string): Observable<{ data: EstadoTramiteCliente }> {
     return this.http.get<{ data: EstadoTramiteCliente }>(`${this.apiUrl}/estado-tramite/${tramiteId}`);
+  }
+
+  obtenerConversacionActiva(clienteId: string): Observable<{
+    tieneConversacionActiva: boolean;
+    conversacionId?: string;
+    estadoConversacion?: string;
+    mensajes?: any[];
+    tramiteId?: string;
+  }> {
+    return this.http.get<any>(`${this.apiUrl}/conversacion-activa?clienteId=${clienteId}`);
   }
 }
