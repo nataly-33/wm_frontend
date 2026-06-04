@@ -2,7 +2,7 @@
 
   <div class="historial-header">
     <div class="header-left">
-      <a [routerLink]="['/admin/tramites']" class="btn-back">&larr; Volver a tramites</a>
+      <a [routerLink]="[backUrl]" class="btn-back"><mat-icon>arrow_back</mat-icon> Volver a trámites</a>
       <h2 class="page-titulo">Historial del Tramite</h2>
       <p class="page-subtitulo">ID: {{ tramiteId }}</p>
     </div>
@@ -33,9 +33,9 @@
           'dot-rechazado':  nodo.fase === 'RECHAZADA',
           'dot-pendiente':  nodo.fase === 'ESPERANDO_CLIENTE' || nodo.fase === 'ESPERANDO_FUNCIONARIO'
         }">
-          <span *ngIf="nodo.fase === 'COMPLETADA'" class="dot-icon dot-check">&#10003;</span>
-          <span *ngIf="nodo.fase === 'RECHAZADA'" class="dot-icon dot-x">&#10007;</span>
-          <span *ngIf="nodo.fase !== 'COMPLETADA' && nodo.fase !== 'RECHAZADA'" class="dot-icon dot-reloj">&#8987;</span>
+          <mat-icon *ngIf="nodo.fase === 'COMPLETADA'" class="dot-icon dot-check">check_circle</mat-icon>
+          <mat-icon *ngIf="nodo.fase === 'RECHAZADA'" class="dot-icon dot-x">cancel</mat-icon>
+          <mat-icon *ngIf="nodo.fase !== 'COMPLETADA' && nodo.fase !== 'RECHAZADA'" class="dot-icon dot-reloj">hourglass_empty</mat-icon>
         </div>
         <div *ngIf="i < historial.length - 1" class="timeline-linea"></div>
       </div>
@@ -66,10 +66,10 @@
               <span class="campo-label">{{ campo.etiqueta }}</span>
 
               <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
-                <span class="icono-archivo">&#128206;</span>
-                <a [href]="campo.valor" target="_blank" class="link-descarga">Ver archivo</a>
+                <mat-icon class="icono-archivo">attach_file</mat-icon>
+                <a [href]="urlVer(campo.valor)" target="_blank" class="link-descarga">Ver archivo</a>
                 <img *ngIf="campo.tipo === 'IMAGEN' && campo.valor"
-                     [src]="campo.valor"
+                     [src]="urlVer(campo.valor)"
                      class="img-thumb"
                      alt="imagen adjunta"
                      (error)="$any($event.target).style.display='none'">
@@ -108,8 +108,8 @@
               <span class="campo-label">{{ campo.etiqueta }}</span>
 
               <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
-                <span class="icono-archivo">&#128206;</span>
-                <a [href]="campo.valor" target="_blank" class="link-descarga">Ver documento</a>
+                <mat-icon class="icono-archivo">attach_file</mat-icon>
+                <a [href]="urlVer(campo.valor)" target="_blank" class="link-descarga">Ver documento</a>
               </div>
 
               <div *ngIf="campo.esTablaGrid && !campo.esArchivo" class="campo-valor">
