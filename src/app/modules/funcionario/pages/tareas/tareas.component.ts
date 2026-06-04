@@ -19,6 +19,11 @@ export class TareasComponent implements OnInit, OnDestroy {
   error: string | null = null;
   userName = '';
 
+  activeTab: 'pendientes' | 'historial' = 'pendientes';
+  historialTareas: EjecucionDetallada[] = [];
+  cargandoHistorial = false;
+  errorHistorial: string | null = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -39,6 +44,15 @@ export class TareasComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  setTab(tab: 'pendientes' | 'historial'): void {
+    this.activeTab = tab;
+    if (tab === 'historial') {
+      this.cargarHistorial();
+    } else {
+      this.cargarTareas();
+    }
+  }
+
   cargarTareas(): void {
     const user = this.authService.getCurrentUser();
     if (!user?.id) {
@@ -57,6 +71,28 @@ export class TareasComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.error = 'Error al cargar tareas. Intente nuevamente.';
+      }
+    });
+  }
+
+  cargarHistorial(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.id) {
+      return;
+    }
+
+    this.cargandoHistorial = true;
+    this.errorHistorial = null;
+    this.ejecucionService.listarHistorialPorFuncionario(user.id).pipe(
+      timeout(15000),
+      takeUntil(this.destroy$),
+      finalize(() => this.cargandoHistorial = false)
+    ).subscribe({
+      next: (res) => {
+        this.historialTareas = res.data ?? [];
+      },
+      error: () => {
+        this.errorHistorial = 'Error al cargar el historial. Intente nuevamente.';
       }
     });
   }

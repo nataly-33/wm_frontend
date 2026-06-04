@@ -49,7 +49,7 @@
 
           <!-- ARCHIVO -->
           <div *ngIf="item.campo.tipo === 'ARCHIVO'" class="campo-valor">
-            <a *ngIf="item.valor" [href]="item.valor" target="_blank" class="link-archivo">
+            <a *ngIf="item.valor" [href]="urlVer(item.valor)" target="_blank" class="link-archivo">
               Ver archivo adjunto
             </a>
             <span *ngIf="!item.valor" class="valor-vacio">Sin archivo</span>
@@ -57,9 +57,9 @@
 
           <!-- IMAGEN -->
           <div *ngIf="item.campo.tipo === 'IMAGEN'" class="campo-valor">
-            <img *ngIf="item.valor" [src]="item.valor" class="img-preview-cliente"
+            <img *ngIf="item.valor" [src]="urlVer(item.valor)" class="img-preview-cliente"
                  (error)="onImgError($event)" alt="Imagen del cliente" />
-            <a *ngIf="item.valor" [href]="item.valor" target="_blank" class="link-archivo">
+            <a *ngIf="item.valor" [href]="urlVer(item.valor)" target="_blank" class="link-archivo">
               Ver imagen
             </a>
             <span *ngIf="!item.valor" class="valor-vacio">Sin imagen</span>

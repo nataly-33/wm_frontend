@@ -165,7 +165,7 @@ export class EjecutarTareaComponent implements OnInit {
     this.ejecucionService.funcionarioCompletar(this.ejecucionId, this.formFuncionario.value).subscribe({
       next: () => { this.router.navigate(['/funcionario/tareas']); },
       error: (err) => {
-        this.error = err?.error?.message ?? 'Error al aprobar la tarea';
+        this.error = err?.error?.mensaje ?? err?.error?.message ?? 'Error al aprobar la tarea';
         this.guardando = false;
       }
     });
@@ -182,7 +182,7 @@ export class EjecutarTareaComponent implements OnInit {
     this.ejecucionService.funcionarioCompletar(this.ejecucionId, respuestas).subscribe({
       next: () => { this.router.navigate(['/funcionario/tareas']); },
       error: (err) => {
-        this.error = err?.error?.message ?? 'Error al rechazar la tarea';
+        this.error = err?.error?.mensaje ?? err?.error?.message ?? 'Error al rechazar la tarea';
         this.guardando = false;
       }
     });
@@ -197,5 +197,28 @@ export class EjecutarTareaComponent implements OnInit {
     if (Array.isArray(valor)) return valor.join(', ');
     if (valor === null || valor === undefined) return '';
     return String(valor);
+  }
+
+  /**
+   * Resuelve la URL de visualizacion/descarga pasandola por el proxy del backend.
+   * Para archivos locales (ruta relativa /api/v1/archivos/) prepend el apiUrl del backend
+   * para que el navegador no intente cargarlos desde el origen del frontend (puerto 4200).
+   * Para archivos en S3 (URL http/https), pasa por el proxy /ver que genera la URL pre-firmada.
+   */
+  urlVer(url: string): string {
+    if (!url) return '';
+    // Archivos locales: la ruta relativa apunta al backend, hay que agregar el host
+    if (url.startsWith('/api/v1/archivos/') && !url.startsWith('/api/v1/archivos/ver')) {
+      return `${environment.apiUrl}${url}`;
+    }
+    // URL ya absoluta y local (mismo origen del backend): devolver tal cual
+    if (url.startsWith(environment.apiUrl)) {
+      return url;
+    }
+    // URL http/https externas (S3, Azure, simuladas): pasar por el proxy del backend
+    if (url.startsWith('http')) {
+      return `${environment.apiUrl}/api/v1/archivos/ver?url=${encodeURIComponent(url)}`;
+    }
+    return url;
   }
 }
