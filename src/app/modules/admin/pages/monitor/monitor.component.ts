@@ -133,6 +133,9 @@ export class MonitorComponent implements OnInit, OnDestroy {
           this.monitor.estadisticas.activos++;
         }
         break;
+      case 'FASE_CAMBIADA':
+        // El monitor se recarga con cargarMonitor() en suscribirEventos
+        break;
     }
   }
 
@@ -140,6 +143,11 @@ export class MonitorComponent implements OnInit, OnDestroy {
     if (depto.color === 'ROJO') return 'tiene-rechazado';
     if (depto.color === 'AMARILLO') return 'tiene-activos';
     return 'vacio';
+  }
+
+  getFaseClass(fase?: string): string {
+    if (fase === 'cliente-chatbot') return 'fase-cliente';
+    return 'fase-funcionario';
   }
 
   getPrioridadClass(prioridad: string): string {

@@ -62,6 +62,9 @@
                 <span class="tram-titulo">{{ tram.titulo }}</span>
               </div>
               <div class="subcard-meta">
+                <span class="fase-chip" [ngClass]="getFaseClass(tram.fase)">
+                  {{ tram.fase ?? 'funcionario' }}
+                </span>
                 <span class="func-nombre">{{ tram.funcionarioNombre }}</span>
                 <span class="tiempo-chip">{{ tram.tiempoTranscurrido }}</span>
               </div>

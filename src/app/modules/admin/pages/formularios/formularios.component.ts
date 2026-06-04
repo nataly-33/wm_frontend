@@ -103,7 +103,8 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         esCampoPrioridad: [false],
         opcionesRaw: [''],
         filas: [3],
-        columnasRaw: ['']
+        columnasRaw: [''],
+        llenadoPor: ['FUNCIONARIO', Validators.required]
       })
     );
   }
@@ -139,7 +140,8 @@ export class FormulariosComponent implements OnInit, OnDestroy {
               esCampoPrioridad: [c.es_campo_prioridad ?? false],
               opcionesRaw: [(c.opciones ?? []).join(',')],
               filas: [c.filas ?? 3],
-              columnasRaw: [(c.columnas ?? []).join(',')]
+              columnasRaw: [(c.columnas ?? []).join(',')],
+              llenadoPor: [c.llenadoPor ?? c.llenado_por ?? 'FUNCIONARIO', Validators.required]
             }));
           });
           if (!this.form.value.nombre) {
@@ -201,7 +203,8 @@ export class FormulariosComponent implements OnInit, OnDestroy {
           esCampoPrioridad: [c.esCampoPrioridad],
           opcionesRaw: [(c.opciones ?? []).join(',')],
           filas: [c.filas ?? 3],
-          columnasRaw: [(c.columnas ?? []).join(',')]
+          columnasRaw: [(c.columnas ?? []).join(',')],
+          llenadoPor: [c.llenadoPor ?? 'FUNCIONARIO', Validators.required]
         })
       );
     });
@@ -266,7 +269,8 @@ export class FormulariosComponent implements OnInit, OnDestroy {
         filas: ctrl.value.tipo === 'TEXTAREA' ? (ctrl.value.filas ?? 3) : null,
         columnas: ctrl.value.tipo === 'GRID'
           ? (ctrl.value.columnasRaw ?? '').split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0)
-          : null
+          : null,
+        llenadoPor: ctrl.value.llenadoPor
       }))
     };
 

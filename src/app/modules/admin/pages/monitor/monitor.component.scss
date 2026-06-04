@@ -325,3 +325,26 @@
     font-style: italic;
   }
 }
+
+// ─── Chips de fase ────────────────────────────────────────────────────────────
+.fase-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fase-cliente {
+  background: #1a5276;
+  color: #aed6f1;
+  border: 1px solid #2e86c1;
+}
+
+.fase-funcionario {
+  background: #1e8449;
+  color: #a9dfbf;
+  border: 1px solid #27ae60;
+}
