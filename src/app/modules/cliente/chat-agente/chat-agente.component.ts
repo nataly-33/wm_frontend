@@ -208,7 +208,7 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   get esCampoArchivo(): boolean {
-    return ['ARCHIVO', 'IMAGEN'].includes(this.campoActivo?.tipo ?? '');
+    return ['ARCHIVO', 'IMAGEN', 'VIDEO'].includes(this.campoActivo?.tipo ?? '');
   }
 
   get esCampoNumero(): boolean {
