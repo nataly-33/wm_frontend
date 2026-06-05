@@ -212,6 +212,14 @@
               />
               <span *ngIf="previewMap[campo.nombre] && campo.tipo === 'ARCHIVO'">
                 Archivo listo: {{ previewMap[campo.nombre] }}
+                <button *ngIf="esArchivoOficina(formFuncionario.get(campo.nombre)?.value)"
+                        type="button"
+                        class="btn-editar-oo mt-2"
+                        (click)="$event.stopPropagation(); abrirEditorOnlyOffice(formFuncionario.get(campo.nombre)?.value)"
+                        title="Editar en OnlyOffice">
+                  <mat-icon style="font-size: 16px; margin-right: 4px; vertical-align: middle;">edit</mat-icon>
+                  Editar
+                </button>
               </span>
               <span *ngIf="isUploadingMap[campo.nombre]">Subiendo...</span>
               <input

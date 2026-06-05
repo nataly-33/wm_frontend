@@ -119,6 +119,19 @@ export class EjecutarTareaComponent implements OnInit {
     const archivo = input.files[0];
     const formData = new FormData();
     formData.append('archivo', archivo);
+    if (this.vistaFuncionario?.tramiteId) {
+      formData.append('tramiteId', this.vistaFuncionario.tramiteId);
+    }
+    if (this.vistaFuncionario?.departamentoId) {
+      formData.append('departamento', this.vistaFuncionario.departamentoId);
+    }
+    if (this.vistaFuncionario?.clienteId) {
+      formData.append('clienteId', this.vistaFuncionario.clienteId);
+    }
+    if (this.vistaFuncionario?.empresaId) {
+      formData.append('empresaId', this.vistaFuncionario.empresaId);
+    }
+
     this.isUploadingMap[nombreCampo] = true;
     this.error = null;
     this.http.post<{ url: string; nombreOriginal: string; tipo: string }>(
