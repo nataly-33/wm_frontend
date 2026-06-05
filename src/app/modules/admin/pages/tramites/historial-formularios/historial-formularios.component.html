@@ -47,7 +47,7 @@
             <h3 class="nodo-nombre">{{ i + 1 }}. {{ nodo.nodoNombre }}</h3>
             <div class="nodo-meta">
               <span *ngIf="nodo.departamento" class="meta-item">Depto: {{ nodo.departamento }}</span>
-              <span class="meta-item">Funcionario: {{ nodo.funcionarioNombre }}</span>
+              <span class="meta-item">Funcionario: {{ nodo.funcionarioNombre || 'Pendiente' }}</span>
               <span *ngIf="nodo.creadoEn" class="meta-item">{{ formatFecha(nodo.creadoEn) }}</span>
             </div>
           </div>
@@ -56,7 +56,7 @@
 
         <!-- Seccion cliente -->
         <div *ngIf="nodo.camposCliente && nodo.camposCliente.length > 0" class="subseccion">
-          <h4 class="subseccion-titulo">Informacion proporcionada por el cliente</h4>
+          <h4 class="subseccion-titulo titulo-cliente">Informacion proporcionada por el cliente</h4>
           <div *ngIf="nodo.clienteCompletadoEn" class="fecha-fase">
             Completado el {{ formatFecha(nodo.clienteCompletadoEn) }}
           </div>
@@ -104,7 +104,7 @@
 
         <!-- Seccion funcionario -->
         <div *ngIf="nodo.camposFuncionario && nodo.camposFuncionario.length > 0" class="subseccion">
-          <h4 class="subseccion-titulo">Evaluacion del funcionario — {{ nodo.funcionarioNombre }}</h4>
+          <h4 class="subseccion-titulo">Evaluacion del funcionario — {{ nodo.funcionarioNombre || 'Pendiente' }}</h4>
           <div *ngIf="nodo.funcionarioCompletadoEn" class="fecha-fase">
             Evaluado el {{ formatFecha(nodo.funcionarioCompletadoEn) }}
           </div>
@@ -132,8 +132,8 @@
 
               <span *ngIf="!campo.esArchivo && !campo.esTablaGrid && esDecision(campo.nombre)"
                     class="chip-decision"
-                    [class.chip-aprobado]="campo.valor === 'Aprobado'"
-                    [class.chip-rechazado]="campo.valor !== 'Aprobado'">
+                    [class.chip-aprobado]="campo.valor === 'Aprobado' || campo.valor === 'Viable' || campo.valor === 'VIABLE'"
+                    [class.chip-rechazado]="campo.valor !== 'Aprobado' && campo.valor !== 'Viable' && campo.valor !== 'VIABLE'">
                 {{ campo.valor }}
               </span>
 

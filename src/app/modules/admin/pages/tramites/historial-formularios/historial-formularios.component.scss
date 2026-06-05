@@ -267,6 +267,10 @@
   letter-spacing: 0.4px;
 }
 
+.titulo-cliente {
+  color: var(--info);
+}
+
 .fecha-fase {
   font-size: 12px;
   color: var(--text-muted);
@@ -285,14 +289,17 @@
 /* Campos */
 .campos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
 }
 
 .campo-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  background-color: transparent;
+  padding: 0;
+  border: none;
 }
 
 .campo-decision {
@@ -300,16 +307,24 @@
 }
 
 .campo-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--primary-200);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  background-color: var(--bg-card);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-300);
 }
 
 .campo-valor {
   font-size: 14px;
   color: var(--text-primary);
+  background-color: var(--bg-card);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
 }
 
 .campo-texto {
@@ -435,10 +450,10 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba(122, 122, 64, 0.15);
-  border: 1px solid var(--primary-400, #565620);
+  background: rgba(254, 204, 27, 0.15);
+  border: 1px solid var(--warning);
   border-radius: 6px;
-  color: var(--primary-200, #9D9D60);
+  color: var(--warning);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -453,8 +468,8 @@
   }
 
   &:hover {
-    background: rgba(122, 122, 64, 0.3);
-    border-color: var(--primary-200, #9D9D60);
-    color: var(--primary-100, #C0C080);
+    background: rgba(254, 204, 27, 0.3);
+    border-color: var(--warning);
+    color: #fff;
   }
 }
