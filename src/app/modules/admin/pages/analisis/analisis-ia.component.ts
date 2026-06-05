@@ -12,7 +12,7 @@ interface ResultadoNodo {
   probabilidad_cuello: number;
   prob_random_forest: number;
   prob_gradient_boosting: number;
-  severidad: 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAJA';
+  severidad: 'CRITICO' | 'ALTO' | 'MEDIO' | 'BAJO';
   metricas: {
     tiempo_promedio_minutos: number;
     tasa_rechazo_pct: number;
@@ -100,20 +100,20 @@ export class AnalisisIaComponent implements OnInit {
 
   getSeveridadClass(severidad: string): string {
     const map: Record<string, string> = {
-      CRITICA: 'badge--critica',
-      ALTA: 'badge--alta',
-      MEDIA: 'badge--media',
-      BAJA: 'badge--baja'
+      CRITICO: 'badge--critica',
+      ALTO: 'badge--alta',
+      MEDIO: 'badge--media',
+      BAJO: 'badge--baja'
     };
     return `badge ${map[severidad] || ''}`;
   }
 
   getBarraClass(severidad: string): string {
     const map: Record<string, string> = {
-      CRITICA: 'barra-fill--critica',
-      ALTA: 'barra-fill--alta',
-      MEDIA: 'barra-fill--media',
-      BAJA: 'barra-fill--baja'
+      CRITICO: 'barra-fill--critica',
+      ALTO: 'barra-fill--alta',
+      MEDIO: 'barra-fill--media',
+      BAJO: 'barra-fill--baja'
     };
     return `barra-fill ${map[severidad] || ''}`;
   }

@@ -135,6 +135,9 @@ interface TipoOficina {
               <button class="btn-accion btn-ver" (click)="verDocumento(doc)" title="Ver/Descargar">
                 <mat-icon>open_in_new</mat-icon>
               </button>
+              <button class="btn-accion btn-eliminar" (click)="eliminarDocumento(doc)" title="Eliminar documento">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
           </div>
         </div>
@@ -518,6 +521,11 @@ interface TipoOficina {
       background: rgba(57, 146, 255, 0.1);
       border-color: var(--info, #3992FF);
     }
+    .btn-eliminar { color: var(--danger, #F44250); }
+    .btn-eliminar:hover {
+      background: rgba(244, 66, 80, 0.1);
+      border-color: var(--danger, #F44250);
+    }
     .btn-auditoria { color: var(--text-muted, #9D9D60); }
     .btn-auditoria:hover {
       background: var(--bg-surface, #1f1f0a);
@@ -723,6 +731,22 @@ export class DocumentosComponent implements OnInit {
   // ============ EDITOR ============
   abrirEditor(docId: string): void {
     this.router.navigate(['/editor-documento', docId], { queryParams: { modo: 'edit' } });
+  }
+
+  eliminarDocumento(doc: DocumentoResponse): void {
+    if (!confirm(`¿Eliminar "${doc.nombre}"? Esta acción no se puede deshacer.`)) return;
+    this.documentoService.eliminarDocumento(doc.id).subscribe({
+      next: () => {
+        this.docsOficina = this.docsOficina.filter(d => d.id !== doc.id);
+        this.msgExito = 'Documento eliminado correctamente.';
+        setTimeout(() => this.msgExito = null, 3000);
+      },
+      error: (err) => {
+        console.error('Error al eliminar:', err);
+        this.error = 'Error al eliminar el documento.';
+        setTimeout(() => this.error = null, 3000);
+      }
+    });
   }
 
   // ============ SUBIR ARCHIVO ============
