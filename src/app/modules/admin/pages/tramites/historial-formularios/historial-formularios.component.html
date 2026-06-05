@@ -68,6 +68,13 @@
               <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
                 <mat-icon class="icono-archivo">attach_file</mat-icon>
                 <a [href]="urlVer(campo.valor)" target="_blank" class="link-descarga">Ver archivo</a>
+                <button *ngIf="esArchivoOficina(campo.valor)"
+                        class="btn-editar-oo"
+                        (click)="abrirEditorOnlyOffice(campo.valor)"
+                        title="Editar en OnlyOffice">
+                  <mat-icon>edit</mat-icon>
+                  Editar
+                </button>
                 <img *ngIf="campo.tipo === 'IMAGEN' && campo.valor"
                      [src]="urlVer(campo.valor)"
                      class="img-thumb"
@@ -110,6 +117,13 @@
               <div *ngIf="campo.esArchivo" class="campo-valor campo-archivo">
                 <mat-icon class="icono-archivo">attach_file</mat-icon>
                 <a [href]="urlVer(campo.valor)" target="_blank" class="link-descarga">Ver documento</a>
+                <button *ngIf="esArchivoOficina(campo.valor)"
+                        class="btn-editar-oo"
+                        (click)="abrirEditorOnlyOffice(campo.valor)"
+                        title="Editar en OnlyOffice">
+                  <mat-icon>edit</mat-icon>
+                  Editar
+                </button>
               </div>
 
               <div *ngIf="campo.esTablaGrid && !campo.esArchivo" class="campo-valor">

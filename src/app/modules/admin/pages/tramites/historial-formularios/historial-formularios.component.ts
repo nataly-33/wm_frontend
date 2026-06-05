@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { EjecucionService, NodoHistorial } from '../../../../../core/services/ejecucion.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { DocumentoService } from '../../../../../core/services/documento.service';
 import { TablaGridViewerComponent } from '../../../../../shared/components/tabla-grid-viewer/tabla-grid-viewer.component';
 import { environment } from '../../../../../../environments/environment';
 
@@ -23,8 +24,10 @@ export class HistorialFormulariosComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private ejecucionService: EjecucionService,
-    private authService: AuthService
+    private authService: AuthService,
+    private documentoService: DocumentoService
   ) {}
 
   ngOnInit(): void {
@@ -116,5 +119,36 @@ export class HistorialFormulariosComponent implements OnInit {
 
   esDecision(nombre: string): boolean {
     return nombre.includes('resultado') || nombre.includes('decision');
+  }
+
+  esArchivoOficina(url: string): boolean {
+    if (!url) return false;
+    const ext = url.split('?')[0].split('.').pop()?.toLowerCase() || '';
+    return ['docx','xlsx','pptx','odt','ods','odp','doc','xls','ppt'].includes(ext);
+  }
+
+  abrirEditorOnlyOffice(urlArchivo: string): void {
+    // Buscar el documento por URL en el backend
+    this.documentoService.buscarPorUrl(urlArchivo).subscribe({
+      next: (doc) => {
+        if (doc.esTramite && doc.urlPresignada) {
+          // Documento de trámite: navegar con la URL pre-firmada en el state
+          // El editor usará el endpoint /api/v1/onlyoffice/config-tramite
+          this.router.navigate(['/editor-documento', doc.id], {
+            queryParams: { modo: 'edit', back: this.router.url, esTramite: 'true' },
+            state: { urlS3Original: urlArchivo }
+          });
+        } else {
+          // Documento normal en la colección Documento
+          this.router.navigate(['/editor-documento', doc.id], {
+            queryParams: { modo: 'edit', back: this.router.url }
+          });
+        }
+      },
+      error: () => {
+        // Si no está en ninguna colección, abrir en nueva ventana como fallback
+        window.open(urlArchivo, '_blank');
+      }
+    });
   }
 }
