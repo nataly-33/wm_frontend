@@ -124,6 +124,17 @@ export const routes: Routes = [
     ]
   },
 
+  // Editor OnlyOffice — ruta standalone sin sidebar para pantalla completa
+  {
+    path: 'editor-documento/:id',
+    canActivate: [AuthGuard],
+    data: { roles: ['ADMIN_GENERAL', 'ADMIN_DEPARTAMENTO', 'FUNCIONARIO', 'CLIENTE'] },
+    loadComponent: () =>
+      import('./modules/admin/pages/documentos/editor-onlyoffice/editor-onlyoffice.component').then(
+        (m) => m.EditorOnlyofficeComponent
+      )
+  },
+
   {
     path: 'admin-depto',
     component: AdminDeptoLayoutComponent,
@@ -149,6 +160,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/admin-depto/pages/tramites/tramites.component').then(
             (m) => m.TramitesComponent
+          )
+      },
+      {
+        path: 'tramites/:tramiteId/historial',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/historial-formularios/historial-formularios.component').then(
+            (m) => m.HistorialFormulariosComponent
           )
       }
     ]
@@ -184,6 +202,13 @@ export const routes: Routes = [
           import('./modules/funcionario/pages/ejecutar-tarea/ejecutar-tarea.component').then(
             (m) => m.EjecutarTareaComponent
           )
+      },
+      {
+        path: 'tramites/:tramiteId/historial',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/historial-formularios/historial-formularios.component').then(
+            (m) => m.HistorialFormulariosComponent
+          )
       }
     ]
   },
@@ -207,10 +232,24 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'mis-tramites',
+        loadComponent: () =>
+          import('./modules/cliente/mis-tramites/mis-tramites.component').then(
+            (m) => m.MisTramitesComponent
+          )
+      },
+      {
         path: 'chat',
         loadComponent: () =>
           import('./modules/cliente/chat-agente/chat-agente.component').then(
             (m) => m.ChatAgenteComponent
+          )
+      },
+      {
+        path: 'tramites/:tramiteId/historial',
+        loadComponent: () =>
+          import('./modules/admin/pages/tramites/historial-formularios/historial-formularios.component').then(
+            (m) => m.HistorialFormulariosComponent
           )
       }
     ]
