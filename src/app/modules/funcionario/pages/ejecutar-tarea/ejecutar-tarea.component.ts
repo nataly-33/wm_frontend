@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { MatIconModule } from '@angular/material/icon';
 import { finalize, timeout } from 'rxjs';
 import {
   EjecucionService,
@@ -10,6 +11,7 @@ import {
   CampoFormulario
 } from '../../../../core/services/ejecucion.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { DocumentoService } from '../../../../core/services/documento.service';
 import { NavbarComponent } from '../../../../shared/components/navbar/navbar.component';
 import { TablaGridViewerComponent } from '../../../../shared/components/tabla-grid-viewer/tabla-grid-viewer.component';
 import { environment } from '../../../../../environments/environment';
@@ -17,7 +19,7 @@ import { environment } from '../../../../../environments/environment';
 @Component({
   selector: 'app-ejecutar-tarea',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NavbarComponent, TablaGridViewerComponent],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, NavbarComponent, TablaGridViewerComponent, MatIconModule],
   templateUrl: './ejecutar-tarea.component.html',
   styleUrls: ['./ejecutar-tarea.component.scss']
 })
@@ -42,7 +44,8 @@ export class EjecutarTareaComponent implements OnInit {
     private router: Router,
     private ejecucionService: EjecucionService,
     private authService: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private documentoService: DocumentoService
   ) {}
 
   ngOnInit(): void {
@@ -220,5 +223,31 @@ export class EjecutarTareaComponent implements OnInit {
       return `${environment.apiUrl}/api/v1/archivos/ver?url=${encodeURIComponent(url)}`;
     }
     return url;
+  }
+
+  esArchivoOficina(url: string): boolean {
+    if (!url) return false;
+    const ext = url.split('?')[0].split('.').pop()?.toLowerCase() || '';
+    return ['docx','xlsx','pptx','odt','ods','odp','doc','xls','ppt'].includes(ext);
+  }
+
+  abrirEditorOnlyOffice(urlArchivo: string): void {
+    this.documentoService.buscarPorUrl(urlArchivo).subscribe({
+      next: (doc) => {
+        if (doc.esTramite && doc.urlPresignada) {
+          // Documento de trámite: pasar URL original en state para que el editor
+          // use el endpoint /api/v1/onlyoffice/config-tramite con URL presignada
+          this.router.navigate(['/editor-documento', doc.id], {
+            queryParams: { modo: 'edit', esTramite: 'true' },
+            state: { urlS3Original: urlArchivo }
+          });
+        } else {
+          this.router.navigate(['/editor-documento', doc.id], { queryParams: { modo: 'edit' } });
+        }
+      },
+      error: () => {
+        window.open(urlArchivo, '_blank');
+      }
+    });
   }
 }

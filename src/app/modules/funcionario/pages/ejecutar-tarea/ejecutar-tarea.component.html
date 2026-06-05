@@ -52,6 +52,13 @@
             <a *ngIf="item.valor" [href]="urlVer(item.valor)" target="_blank" class="link-archivo">
               Ver archivo adjunto
             </a>
+            <button *ngIf="item.valor && esArchivoOficina(item.valor)"
+                    class="btn-editar-oo"
+                    (click)="abrirEditorOnlyOffice(item.valor)"
+                    title="Editar en OnlyOffice">
+              <mat-icon>edit</mat-icon>
+              Editar
+            </button>
             <span *ngIf="!item.valor" class="valor-vacio">Sin archivo</span>
           </div>
 

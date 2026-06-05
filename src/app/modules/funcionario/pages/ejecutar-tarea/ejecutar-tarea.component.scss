@@ -321,3 +321,33 @@
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
 }
+
+// Botón editar en OnlyOffice
+.btn-editar-oo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(122, 122, 64, 0.15);
+  border: 1px solid var(--primary-400, #565620);
+  border-radius: 6px;
+  color: var(--primary-200, #9D9D60);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-left: 8px;
+  vertical-align: middle;
+
+  mat-icon {
+    font-size: 14px !important;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: rgba(122, 122, 64, 0.3);
+    border-color: var(--primary-200, #9D9D60);
+    color: var(--primary-100, #C0C080);
+  }
+}
