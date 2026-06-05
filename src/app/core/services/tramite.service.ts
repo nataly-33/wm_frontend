@@ -116,6 +116,10 @@ export class TramiteService {
     return this.http.get<ApiResponse<TramiteDetallado[]>>(`${this.apiUrl}/empresa/${empresaId}`);
   }
 
+  listarPorCliente(clienteId: string): Observable<ApiResponse<TramiteDetallado[]>> {
+    return this.http.get<ApiResponse<TramiteDetallado[]>>(`${this.apiUrl}/cliente/${clienteId}`);
+  }
+
   listarPorPolitica(politicaId: string): Observable<ApiResponse<Tramite[]>> {
     return this.http.get<ApiResponse<Tramite[]>>(`${this.apiUrl}/politica/${politicaId}`);
   }

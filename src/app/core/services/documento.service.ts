@@ -132,4 +132,8 @@ export class DocumentoService {
   listarOficina(): Observable<DocumentoResponse[]> {
     return this.http.get<DocumentoResponse[]>(`${this.base}/oficina`);
   }
+
+  eliminarDocumento(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
 }

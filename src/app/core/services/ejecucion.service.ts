@@ -22,6 +22,10 @@ export interface CampoConValor {
 
 export interface VistaFuncionarioResponse {
   ejecucionId: string;
+  tramiteId?: string;
+  departamentoId?: string;
+  clienteId?: string;
+  empresaId?: string;
   fase: string;
   camposCliente: CampoConValor[];
   camposFuncionario: CampoFormulario[];
