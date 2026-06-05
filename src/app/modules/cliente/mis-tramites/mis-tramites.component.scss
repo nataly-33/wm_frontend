@@ -1,0 +1,212 @@
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--primary-200);
+  text-decoration: none;
+  margin-bottom: 8px;
+  transition: var(--transition);
+
+  &:hover {
+    color: var(--primary-100);
+  }
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--text-muted);
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(192, 192, 128, 0.1);
+    border-top-color: var(--primary-200);
+    border-radius: 50%;
+    animation: spin 1s infinite linear;
+    margin-bottom: 16px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.alert-error {
+  background: rgba(244, 66, 80, 0.08);
+  border: 1px solid rgba(244, 66, 80, 0.2);
+  color: var(--danger);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+
+  svg {
+    color: var(--primary-300);
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+  }
+
+  p {
+    font-size: 13px;
+    margin: 0;
+    max-width: 320px;
+  }
+}
+
+.tramites-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.tramite-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: var(--transition);
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-light);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.tramite-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prio-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  &.prio-alta { background: rgba(244, 66, 80, 0.1); color: var(--danger); border: 1px solid rgba(244, 66, 80, 0.2); }
+  &.prio-media { background: rgba(254, 204, 27, 0.1); color: var(--warning); border: 1px solid rgba(254, 204, 27, 0.2); }
+  &.prio-baja { background: rgba(107, 217, 104, 0.1); color: var(--success); border: 1px solid rgba(107, 217, 104, 0.2); }
+}
+
+.estado-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+
+  &.estado-proceso { background: rgba(254, 204, 27, 0.1); color: var(--warning); border: 1px solid rgba(254, 204, 27, 0.25); }
+  &.estado-completado { background: rgba(107, 217, 104, 0.1); color: var(--success); border: 1px solid rgba(107, 217, 104, 0.25); }
+  &.estado-rechazado { background: rgba(244, 66, 80, 0.1); color: var(--danger); border: 1px solid rgba(244, 66, 80, 0.25); }
+}
+
+.tramite-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.tramite-titulo-texto {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.tramite-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.info-label {
+  color: var(--text-muted);
+}
+
+.info-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.tramite-actions {
+  margin-top: auto;
+}
+
+.btn {
+  display: inline-block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition);
+  box-sizing: border-box;
+
+  &.btn-primary {
+    background: linear-gradient(135deg, var(--primary-400), var(--primary-300));
+    color: var(--bg-dark);
+    border-color: rgba(192, 192, 128, 0.4);
+
+    &:hover {
+      background: linear-gradient(135deg, var(--primary-300), var(--primary-200));
+    }
+  }
+}

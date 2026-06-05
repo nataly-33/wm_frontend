@@ -1,0 +1,75 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <a routerLink="/cliente/dashboard" class="btn-back">&larr; Volver a inicio</a>
+      <h1 class="page-title">Mis Trámites</h1>
+      <p class="page-subtitle">Historial de solicitudes e inicio de trámites</p>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando tus trámites...</p>
+  </div>
+
+  <div *ngIf="error && !cargando" class="alert alert-error">
+    <span>{{ error }}</span>
+  </div>
+
+  <div *ngIf="!cargando && tramites.length === 0 && !error" class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11l3 3L22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+    <h3>No tienes trámites registrados</h3>
+    <p>Usa el asistente virtual para iniciar tu primer trámite.</p>
+  </div>
+
+  <div *ngIf="!cargando && tramites.length > 0" class="tramites-list">
+    <div *ngFor="let t of tramites" class="tramite-card">
+      <div class="tramite-header">
+        <span class="prio-badge" [ngClass]="getPrioridadClass(t.prioridad)">
+          {{ t.prioridad || 'MEDIA' }}
+        </span>
+        <span class="estado-badge" [ngClass]="getEstadoClass(t.estadoGeneral)">
+          {{ getEstadoLabel(t.estadoGeneral) }}
+        </span>
+      </div>
+
+      <div class="tramite-body">
+        <h3 class="tramite-titulo-texto">{{ t.titulo }}</h3>
+        
+        <div class="tramite-info-row">
+          <span class="info-label">Tipo de Trámite:</span>
+          <span class="info-text">{{ t.nombrePolitica || 'N/A' }}</span>
+        </div>
+
+        <div class="tramite-info-row">
+          <span class="info-label">ID Trámite:</span>
+          <span class="info-text">{{ t.id }}</span>
+        </div>
+
+        <div class="tramite-info-row" *ngIf="t.nodoActualNombre">
+          <span class="info-label">Etapa Actual:</span>
+          <span class="info-text">{{ t.nodoActualNombre }}</span>
+        </div>
+        
+        <div class="tramite-info-row">
+          <span class="info-label">Fecha de Inicio:</span>
+          <span class="info-text">{{ formatFecha(t.iniciadoEn) }}</span>
+        </div>
+
+        <div class="tramite-info-row" *ngIf="t.finalizadoEn">
+          <span class="info-label">Fecha de Finalización:</span>
+          <span class="info-text">{{ formatFecha(t.finalizadoEn) }}</span>
+        </div>
+      </div>
+
+      <div class="tramite-actions">
+        <a [routerLink]="['/cliente/tramites', t.id, 'historial']" class="btn btn-primary">
+          Ver historial de formularios
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

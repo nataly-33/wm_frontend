@@ -242,6 +242,9 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.procesando = true;
     const formData = new FormData();
     formData.append('archivo', this.archivoSeleccionado);
+    if (this.clienteId) {
+      formData.append('clienteId', this.clienteId);
+    }
 
     this.http.post<any>(`${environment.apiUrl}/api/v1/archivos/subir`, formData).subscribe({
       next: (res) => {
@@ -326,6 +329,11 @@ export class ChatAgenteComponent implements OnInit, OnDestroy, AfterViewChecked 
       if (evento.tipo === 'MENSAJE_AGENTE' && evento.mensaje) {
         const tipoMsg = evento.tipoMensaje ?? 'texto';
         this.agregarMensajeAgente(evento.mensaje, tipoMsg);
+
+        // Actualizar estado si el motor lo cambio (para desbloquear el input instantaneamente)
+        if (evento.estadoConversacion) {
+          this.estadoConversacion = evento.estadoConversacion;
+        }
 
         // Actualizar campoActivo si el WS incluye campoMeta
         if (evento.campoMeta) {

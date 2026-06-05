@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { DepartamentoService, Departamento } from '../../../core/services/departamento.service';
-import { TramiteService, Tramite } from '../../../core/services/tramite.service';
+import { TramiteService, TramiteDetallado } from '../../../core/services/tramite.service';
 import { PoliticaService, Politica } from '../../../core/services/politica.service';
 
 @Component({
@@ -24,19 +23,16 @@ export class ClienteDashboardComponent implements OnInit {
   cargando = true;
 
   // Estadísticas
-  totalDepartamentos = 0;
   tramitesActivos = 0;
   tramitesCompletados = 0;
   tramitesRechazados = 0;
   politicasDisponibles = 0;
 
-  departamentos: Departamento[] = [];
-  misTramites: Tramite[] = [];
+  misTramites: TramiteDetallado[] = [];
   politicas: Politica[] = [];
 
   constructor(
     private authService: AuthService,
-    private deptoService: DepartamentoService,
     private tramiteService: TramiteService,
     private politicaService: PoliticaService,
     private router: Router
@@ -61,22 +57,19 @@ export class ClienteDashboardComponent implements OnInit {
     this.cargando = true;
 
     forkJoin({
-      departamentos: this.deptoService.listar(),
-      tramites: this.tramiteService.listarPorEmpresa(this.empresaId),
+      tramites: this.tramiteService.listarPorCliente(this.clienteId),
       politicas: this.politicaService.listar()
     }).subscribe({
-      next: ({ departamentos, tramites, politicas }) => {
-        this.departamentos = (departamentos.data ?? []).slice(0, 6);
-        this.totalDepartamentos = departamentos.data?.length ?? 0;
+      next: ({ tramites, politicas }) => {
+        const todos: TramiteDetallado[] = tramites.data ?? [];
+        
+        // Calculate stats on all client tramites
+        this.tramitesActivos = todos.filter((t) => t.estadoGeneral === 'EN_PROCESO' || t.estadoGeneral === 'PENDIENTE').length;
+        this.tramitesCompletados = todos.filter((t) => t.estadoGeneral === 'COMPLETADO').length;
+        this.tramitesRechazados = todos.filter((t) => t.estadoGeneral === 'RECHAZADO').length;
 
-        const todos: Tramite[] = tramites.data ?? [];
-        this.misTramites = todos
-          .filter((t: Tramite) => t.iniciadoPor === this.clienteId)
-          .slice(0, 4);
-
-        this.tramitesActivos = this.misTramites.filter((t: Tramite) => t.estadoGeneral === 'EN_PROCESO').length;
-        this.tramitesCompletados = this.misTramites.filter((t: Tramite) => t.estadoGeneral === 'COMPLETADO').length;
-        this.tramitesRechazados = this.misTramites.filter((t: Tramite) => t.estadoGeneral === 'RECHAZADO').length;
+        // Show only the 4 most recent for the dashboard
+        this.misTramites = todos.slice(0, 4);
 
         const pol: Politica[] = politicas.data ?? [];
         this.politicas = pol.filter((p: Politica) => p.estado === 'ACTIVA').slice(0, 4);
@@ -117,11 +110,7 @@ export class ClienteDashboardComponent implements OnInit {
     }
   }
 
-  getDepartamentoIniciales(nombre: string): string {
-    const palabras = nombre.trim().split(' ');
-    if (palabras.length >= 2) return (palabras[0][0] + palabras[1][0]).toUpperCase();
-    return nombre.substring(0, 2).toUpperCase();
-  }
+
 
   formatFecha(fecha: Date | string | undefined): string {
     if (!fecha) return '-';

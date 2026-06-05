@@ -187,39 +187,7 @@
       </div>
     </div>
 
-    <!-- ── Departamentos ──────────────────────────────────────────── -->
-    <div class="panel departamentos-panel">
-      <div class="panel-header">
-        <div class="panel-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          <span>Departamentos de la Empresa</span>
-        </div>
-        <span class="panel-badge">{{ totalDepartamentos }} total</span>
-      </div>
 
-      <div class="deptos-grid">
-        <div class="depto-card" *ngFor="let d of departamentos">
-          <div class="depto-avatar">{{ getDepartamentoIniciales(d.nombre) }}</div>
-          <div class="depto-info">
-            <span class="depto-nombre">{{ d.nombre }}</span>
-            <span class="depto-desc">{{ d.descripcion | slice:0:50 }}{{ (d.descripcion?.length ?? 0) > 50 ? '...' : '' }}</span>
-          </div>
-          <div class="depto-status" [class.activo]="d.activo">
-            {{ d.activo ? 'Activo' : 'Inactivo' }}
-          </div>
-        </div>
-      </div>
-
-      <div class="empty-state-sm" *ngIf="departamentos.length === 0">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        </svg>
-        <p>Sin departamentos registrados</p>
-      </div>
-    </div>
 
   </ng-container>
 </div>
