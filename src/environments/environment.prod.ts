@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://wm-backend-n1nl.onrender.com',
-  wsUrl: 'wss://wm-backend-n1nl.onrender.com/ws',
-  onlyofficeUrl: 'http://localhost:8088'
+  apiUrl: 'http://3.85.237.101:8080/api/v1',
+  wsUrl: 'ws://3.85.237.101:8080/ws',
+  onlyofficeUrl: 'http://3.85.237.101:8088'
 };
